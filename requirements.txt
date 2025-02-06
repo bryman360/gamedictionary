@@ -1,0 +1,6 @@
+flask
+flask-jwt-extended
+sqlalchemy
+flask-sqlalchemy
+flask-smorest
+psycopg2
