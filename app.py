@@ -1,4 +1,5 @@
 from flask import Flask, request
+from flask_smorest import abort
 
 app = Flask(__name__)
 
@@ -21,10 +22,10 @@ games_db = {
 
 
 @app.get("/word/<int:word_id>")
-def get_word(word_id:int):
+def get_word(word_id: int):
     if word_id in words_db:
-        return words_db[word_id]
-    return {"message": "Word not found"}, 404
+        return words_db[int(word_id)]
+    abort(404, message=f"Word with ID {word_id} not found.")
 
 
 @app.post("/word")
@@ -44,7 +45,7 @@ def create_word():
 
 
 @app.post("/game")
-def create_word():
+def create_game():
     request_data = request.get_json()
     global game_count
     game_count = game_count + 1
@@ -56,9 +57,9 @@ def create_word():
     return new_word_post, 201
 
 @app.get("/game/<int:game_id>")
-def get_game(game_id:int):
+def get_game(game_id: int):
     if game_id in games_db:
         return games_db[game_id]
-    return {"message": f"Game with id {game_id} not found"}, 404
+    abort(404, message=f"Game with ID {game_id} not found.")
 
     
