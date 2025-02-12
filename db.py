@@ -1,6 +1,8 @@
 import uuid
 from datetime import datetime
+from flask_sqlalchemy import SQLAlchemy
 
+db = SQLAlchemy()
 
 first_game_id = uuid.uuid4().hex
 first_word_id = uuid.uuid4().hex
