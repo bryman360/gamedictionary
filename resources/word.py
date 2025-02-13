@@ -1,11 +1,12 @@
 import uuid
 
 from datetime import datetime
-from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
 from schemas import WordSchema, WordUpdateSchema
-from db import words_db
+from sqlalchemy.exc import SQLAlchemyError
+from db import db
+from models import WordModel
 
 blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
 
@@ -13,52 +14,61 @@ blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
 @blp.route("/word/<string:word_id>")
 class Word(MethodView):
     @blp.response(200, WordSchema)
-    def get(self, word_id: str):
+    def get(self, word_id: int):
         try:
-            return words_db[word_id]
+            word = WordModel.query.get_or_404(word_id)
+            return word
         except KeyError:
             abort(404, message=f"Word with ID {word_id} not found.")
 
     @blp.arguments(WordUpdateSchema)
     @blp.response(200, WordSchema)
-    def put(self, word_update_data, word_id: str):
+    def put(self, request_payload: dict, word_id: int):
+        word = WordModel.query.get(word_id)
+        if word:
+            word.word = request_payload['word'] if 'word' in request_payload else word.word
+            word.definition = request_payload['definition'] if 'definition' in request_payload else word.word
+            word.example = request_payload['example'] if 'example' in request_payload else word.word
+        else:
+            word = WordModel(**request_payload)
+            word.submit_datetime = datetime.now()
+            word.published = False
+
         try:
-            word = words_db[word_id]
-            word |= word_update_data
+            db.session.add(word)
+            db.session.commit()
             return word
-        except KeyError:
-            abort(404, message=f"No word with ID {word_id} found.")
+        except SQLAlchemyError:
+            abort(500, message="Could not save Word to SQL database.")
     
     @blp.response(200, WordSchema)
-    def delete(self, word_id:str):
+    def delete(self, word_id: int):
+        word = WordModel.query.get_or_404(word_id)
         try:
-            word = words_db[word_id]
-            del words_db[word_id]
+            db.session.delete(word)
+            db.session.commit()
             return word
-        except KeyError:
-            abort(404, message=f"Word with ID {word_id} not found.")
+        except SQLAlchemyError:
+            abort(500, message=f"Word with ID {word_id} could not be deleted from SQL database.")
 
 
 @blp.route("/word")
 class WordAdd(MethodView):
     @blp.response(200, WordSchema(many=True))
     def get(self):
-        return words_db.values()
+        return WordModel.query.all()
     
     @blp.arguments(WordSchema)
     @blp.response(201, WordSchema)
-    def post(self, word_data):
+    def post(self, request_payload: dict):
+        word = WordModel(**request_payload)
+        word.submit_datetime = datetime.now()
+        word.published = False
 
-        word_id = uuid.uuid4().hex
-        new_word_post = {
-            "word_id": word_id,
-            "word": word_data["word"],
-            "definition": word_data["definition"],
-            "example": word_data["example"],
-            "author_id": word_data['author_id'],
-            "published": False,
-            "submit_datetime": datetime.now()
-        }
+        try:
+            db.session.add(word)
+            db.session.commit()
+            return word
+        except SQLAlchemyError:
+            abort(500, message="Unable to save to SQL database.")
 
-        words_db[word_id] = new_word_post
-        return {"word_id": word_id, **new_word_post}, 201
