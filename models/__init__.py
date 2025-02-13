@@ -1,3 +1,3 @@
-from game import GameModel
-from user import UserModel
-from word import WordModel
+from models.game import GameModel
+from models.user import UserModel
+from models.word import WordModel
