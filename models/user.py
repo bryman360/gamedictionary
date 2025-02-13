@@ -7,4 +7,4 @@ class UserModel(db.Model):
     username = db.Column(db.String(50), unique=True, nullable=False)
     # TODO: Store Hashed Password
 
-    words = db.relationship("WordModel", back_populates="user", lazy="dynamic")
+    # words = db.relationship("WordModel", back_populates="user", lazy="dynamic")
