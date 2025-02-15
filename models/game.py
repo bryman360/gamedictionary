@@ -7,3 +7,5 @@ class GameModel(db.Model):
     game_name = db.Column(db.String(50), unique=False, nullable=False)
     image_url = db.Column(db.Text(), unique=False, nullable=True)
     wiki_url = db.Column(db.Text(), unique=False, nullable=True)
+
+    words = db.relationship("WordModel", back_populates="games", secondary="games_words")

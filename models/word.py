@@ -13,3 +13,4 @@ class WordModel(db.Model):
     submit_datetime = db.Column(db.DateTime, unique=False, nullable=False)
 
     # user = db.relationship("UserModel", back_populates="words")
+    games = db.relationship("GameModel", back_populates="words", secondary="games_words")

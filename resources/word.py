@@ -3,10 +3,10 @@ import uuid
 from datetime import datetime
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from schemas import WordSchema, WordUpdateSchema
+from schemas import WordSchema, WordUpdateSchema, GameSchema
 from sqlalchemy.exc import SQLAlchemyError
 from db import db
-from models import WordModel
+from models import WordModel, GameModel
 
 blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
 
@@ -72,3 +72,12 @@ class WordAdd(MethodView):
         except SQLAlchemyError:
             abort(500, message="Unable to save to SQL database.")
 
+
+@blp.route("/word/<int:word_id>/game")
+class WordGamesList(MethodView):
+    @blp.response(200, GameSchema(many=True))
+    def get(self, word_id: int):
+        word = WordModel.query.get_or_404(word_id)
+        if word.games:
+            return word.games
+        return []

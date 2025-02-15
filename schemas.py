@@ -31,12 +31,18 @@ class PlainUserSchema(Schema):
 class WordSchema(PlainWordSchema):
     author_id = fields.Int(required=True, load_only=True)
     user = fields.Nested(PlainUserSchema(), dump_only=True)
+    games = fields.Nested(PlainGameSchema(), dump_only=True)
 
 class GameSchema(PlainGameSchema):
-    pass
+    words = fields.Nested(PlainWordSchema(), dump_only=True)
 
 class UserSchema(PlainUserSchema):
     words = fields.List(fields.Nested(PlainWordSchema()), dump_only=True)
+
+class GameAndWordSchema(Schema):
+    message = fields.Str()
+    game = fields.Nested(GameSchema)
+    word = fields.Nested(WordSchema)
 
 
 # ------------------------------------------------------------
