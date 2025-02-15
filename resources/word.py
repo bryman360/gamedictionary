@@ -1,12 +1,11 @@
-import uuid
-
 from datetime import datetime
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from schemas import WordSchema, WordUpdateSchema, GameSchema
 from sqlalchemy.exc import SQLAlchemyError
+
 from db import db
 from models import WordModel, GameModel
+from schemas import WordSchema, WordUpdateSchema, GameSchema
 
 blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
 
@@ -15,11 +14,7 @@ blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
 class Word(MethodView):
     @blp.response(200, WordSchema)
     def get(self, word_id: int):
-        try:
-            word = WordModel.query.get_or_404(word_id)
-            return word
-        except KeyError:
-            abort(404, message=f"Word with ID {word_id} not found.")
+        return WordModel.query.get_or_404(word_id)
 
     @blp.arguments(WordUpdateSchema)
     @blp.response(200, WordSchema)
@@ -39,7 +34,7 @@ class Word(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Could not save Word to SQL database.")
+            abort(500, message="Could not save word to database.")
     
     @blp.response(200, WordSchema)
     def delete(self, word_id: int):
@@ -49,7 +44,7 @@ class Word(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message=f"Word with ID {word_id} could not be deleted from SQL database.")
+            abort(500, message=f"Word with ID {word_id} could not be deleted from database.")
 
 
 @blp.route("/word")
@@ -70,7 +65,7 @@ class WordAdd(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Unable to save to SQL database.")
+            abort(500, message="Unable to save word to database.")
 
 
 @blp.route("/word/<int:word_id>/game")

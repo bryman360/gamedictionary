@@ -5,6 +5,7 @@ from flask_smorest import Api
 
 from resources.game import blp as GameBlueprint
 from resources.word import blp as WordBlueprint
+from resources.user import blp as UserBlueprint
 from db import db
 
 import models
@@ -32,5 +33,6 @@ def create_app(db_url=None):
 
     api.register_blueprint(GameBlueprint)
     api.register_blueprint(WordBlueprint)
+    api.register_blueprint(UserBlueprint)
 
     return app

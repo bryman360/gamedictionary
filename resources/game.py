@@ -1,10 +1,10 @@
-from flask import request
 from flask.views import MethodView
 from flask_smorest import Blueprint, abort
-from schemas import GameSchema, GameUpdateSchema, WordSchema
 from sqlalchemy.exc import SQLAlchemyError
+
 from db import db
 from models import GameModel, WordModel
+from schemas import GameSchema, GameUpdateSchema, WordSchema
 
 
 blp = Blueprint("Games", __name__, description="Blueprint for /game endpoints")
@@ -57,7 +57,7 @@ class GameList(MethodView):
             db.session.commit()
             return game
         except SQLAlchemyError:
-            abort(500, message="Unable to post to SQL database.")
+            abort(500, message="Unable to post to database.")
 
 
 @blp.route("/game/<int:game_id>/word")
@@ -84,7 +84,7 @@ class LinkGameToWord(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Unable to link game and word in SQL database.")
+            abort(500, message="Unable to link game and word in database.")
     
     @blp.response(200, WordSchema)
     def delete(self, game_id: int, word_id: int):
@@ -97,4 +97,4 @@ class LinkGameToWord(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Unable to link game and word in SQL database.")
+            abort(500, message="Unable to delete game and word link in database.")
