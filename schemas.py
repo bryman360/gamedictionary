@@ -22,6 +22,7 @@ class PlainGameSchema(Schema):
 class PlainUserSchema(Schema):
     user_id = fields.Int(dump_only=True)
     username = fields.Str(unique=True, required=True)
+    password = fields.Str(required=True, load_only=True)
 
 
 # ------------------------------------------------------------
@@ -61,3 +62,4 @@ class GameUpdateSchema(Schema):
 
 class UserUpdateSchema(Schema):
     username = fields.Str()
+    password = fields.Str()
