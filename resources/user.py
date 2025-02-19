@@ -5,6 +5,7 @@ from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import SQLAlchemyError
 
 
+from blocklist import BLOCKLIST
 from db import db
 from models import UserModel
 from schemas import UserSchema, UserUpdateSchema
@@ -95,3 +96,12 @@ class UserLogin(MethodView):
             access_token = create_access_token(identity=str(user.user_id))
             return {'access_token': access_token}
         abort(401, message="Invalid login credentials.")
+
+@blp.route("/logout")
+class UserLogout(MethodView):
+    @jwt_required()
+    def post(self):
+        jwt = get_jwt()
+        jti = jwt.get('jti')
+        BLOCKLIST.add(jti)
+        return {'message': "Successfully logged out."}
