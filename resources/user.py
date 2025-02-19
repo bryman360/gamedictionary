@@ -1,5 +1,5 @@
 from flask.views import MethodView
-from flask_jwt_extended import create_access_token, get_jwt, jwt_required
+from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import SQLAlchemyError
@@ -45,7 +45,8 @@ class User(MethodView):
     @blp.arguments(UserUpdateSchema)
     def put(self, request_payload, user_id: int):
         jwt = get_jwt()
-        if not jwt.get('is_admin') and not jwt.get('sub') == str(user_id):
+        current_user = get_jwt_identity()
+        if not jwt.get('is_admin') and not current_user == str(user_id):
             abort(403, message=f"Permission denied, user id does not match account id")
 
         user = UserModel.query.get_or_404(user_id)
@@ -73,7 +74,8 @@ class User(MethodView):
     @blp.response(204)
     def delete(self, user_id: int):
         jwt = get_jwt()
-        if not jwt.get('is_admin') and not jwt.get('identity') == str(user_id):
+        current_user = get_jwt_identity()
+        if not jwt.get('is_admin') and not current_user == str(user_id):
             abort(403, message="Permission denied, user id does not match account id.")
 
         user = UserModel.query.get_or_404(user_id)

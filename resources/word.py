@@ -1,6 +1,6 @@
 from datetime import datetime
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, jwt_required
+from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -24,7 +24,8 @@ class Word(MethodView):
 
         word = WordModel.query.get(word_id)
         jwt = get_jwt()
-        if word and not jwt.get('is_admin') and not jwt.get('sub') == str(word.author_id):
+        current_user = get_jwt_identity()
+        if not jwt.get('is_admin') and not current_user == str(word.author_id):
             abort(403, message="Permission denied. User does not have permission to alter word.")
         if word:
             word.word = request_payload['word'] if 'word' in request_payload else word.word
@@ -47,7 +48,8 @@ class Word(MethodView):
     @blp.response(204)
     def delete(self, word_id: int):
         jwt = get_jwt()
-        if not jwt.get('is_admin') and not jwt.get('sub') == str(word.author_id):
+        current_user = get_jwt_identity()
+        if not jwt.get('is_admin') and not current_user == str(word.author_id):
             abort(403, message="Permission denied. User does not have permission to alter word.")
         word = WordModel.query.get_or_404(word_id)
         try:
