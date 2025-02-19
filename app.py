@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask
+from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
 from flask_smorest import Api
 from dotenv import load_dotenv
@@ -15,6 +15,7 @@ import models
 
 def create_app(db_url=None):
     load_dotenv()
+
 
     app = Flask(__name__)
 
@@ -32,6 +33,38 @@ def create_app(db_url=None):
     db.init_app(app)
     api = Api(app)
     jwt = JWTManager(app)
+
+    # TODO: Convert from "identity==1" check to looking in DB for an actual admin flag (not setup yet)
+    @jwt.additional_claims_loader
+    def add_claims_to_jwt(identity):
+        additional_claims = {}
+        if identity == "1":
+            additional_claims['is_admin'] = True
+        return additional_claims
+
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify(
+                {
+                    "message": "Access token expired.",
+                    "error": "token_expired"
+                }
+            ),
+            401
+        )
+    
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return (
+            jsonify(
+                {
+                    "message": "Request does not contain an access token.",
+                    "error": "authorization_required"    
+                }
+            ),
+            401
+        )
 
     @app.before_request
     def create_tables():

@@ -1,5 +1,6 @@
 from datetime import datetime
 from flask.views import MethodView
+from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -16,10 +17,15 @@ class Word(MethodView):
     def get(self, word_id: int):
         return WordModel.query.get_or_404(word_id)
 
+    @jwt_required()
     @blp.arguments(WordUpdateSchema)
     @blp.response(200, WordSchema)
     def put(self, request_payload: dict, word_id: int):
+
         word = WordModel.query.get(word_id)
+        jwt = get_jwt()
+        if word and not jwt.get('is_admin') and not jwt.get('sub') == str(word.author_id):
+            abort(403, message="Permission denied. User does not have permission to alter word.")
         if word:
             word.word = request_payload['word'] if 'word' in request_payload else word.word
             word.definition = request_payload['definition'] if 'definition' in request_payload else word.word
@@ -36,13 +42,18 @@ class Word(MethodView):
         except SQLAlchemyError:
             abort(500, message="Could not save word to database.")
     
-    @blp.response(200, WordSchema)
+    # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
+    @jwt_required()
+    @blp.response(204)
     def delete(self, word_id: int):
+        jwt = get_jwt()
+        if not jwt.get('is_admin') and not jwt.get('sub') == str(word.author_id):
+            abort(403, message="Permission denied. User does not have permission to alter word.")
         word = WordModel.query.get_or_404(word_id)
         try:
             db.session.delete(word)
             db.session.commit()
-            return word
+            return {}
         except SQLAlchemyError:
             abort(500, message=f"Word with ID {word_id} could not be deleted from database.")
 
@@ -53,6 +64,7 @@ class WordAdd(MethodView):
     def get(self):
         return WordModel.query.all()
     
+    @jwt_required()
     @blp.arguments(WordSchema)
     @blp.response(201, WordSchema)
     def post(self, request_payload: dict):

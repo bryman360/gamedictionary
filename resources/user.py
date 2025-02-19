@@ -1,5 +1,5 @@
 from flask.views import MethodView
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import SQLAlchemyError
@@ -26,7 +26,10 @@ class UserRegistration(MethodView):
         try:
             db.session.add(user)
             db.session.commit()
-            return {"message": "User successfully registered."}, 201
+            return {
+                'message': "User successfully registered.",
+                'access_token': create_access_token(identity=str(user.user_id))
+            }, 201
         except SQLAlchemyError:
             abort(500, message="Unable to save user to database.")
 
@@ -37,8 +40,13 @@ class User(MethodView):
     def get(self, user_id: int):
         return UserModel.query.get_or_404(user_id)
     
+    @jwt_required()
     @blp.arguments(UserUpdateSchema)
     def put(self, request_payload, user_id: int):
+        jwt = get_jwt()
+        if not jwt.get('is_admin') and not jwt.get('sub') == str(user_id):
+            abort(403, message=f"Permission denied, user id does not match account id")
+
         user = UserModel.query.get_or_404(user_id)
         
         if not user:
@@ -54,19 +62,26 @@ class User(MethodView):
         try:
             db.session.add(user)
             db.session.commit()
-            return {"message": "User successfully updated."}, 200
+            return {'message': "User successfully updated."}, 200
         except SQLAlchemyError:
             abort(500, message="Unable to update user in database.")
 
 
-    
-    @blp.response(200, UserSchema)
+    # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
+    @jwt_required()
+    @blp.response(204)
     def delete(self, user_id: int):
+        jwt = get_jwt()
+        if not jwt.get('is_admin') and not jwt.get('identity') == str(user_id):
+            abort(403, message="Permission denied, user id does not match account id.")
+
         user = UserModel.query.get_or_404(user_id)
 
         try:
             db.session.delete(user)
             db.session.commit(user)
+            #TODO: Expire token.
+            return {}
         except SQLAlchemyError:
             abort(500, message="Unable to delete user from database.")
 
@@ -77,6 +92,6 @@ class UserLogin(MethodView):
     def post(self, request_payload):
         user = UserModel.query.filter(UserModel.username == request_payload['username']).first()
         if user and pbkdf2_sha256.verify(request_payload['password'], user.password):
-            access_token = create_access_token(identity=user.user_id)
-            return {"access_token": access_token}
+            access_token = create_access_token(identity=str(user.user_id))
+            return {'access_token': access_token}
         abort(401, message="Invalid login credentials.")
