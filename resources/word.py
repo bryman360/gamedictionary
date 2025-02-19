@@ -29,8 +29,8 @@ class Word(MethodView):
             abort(403, message="Permission denied. User does not have permission to alter word.")
         if word:
             word.word = request_payload['word'] if 'word' in request_payload else word.word
-            word.definition = request_payload['definition'] if 'definition' in request_payload else word.word
-            word.example = request_payload['example'] if 'example' in request_payload else word.word
+            word.definition = request_payload['definition'] if 'definition' in request_payload else word.definition
+            word.example = request_payload['example'] if 'example' in request_payload else word.example
         else:
             word = WordModel(**request_payload)
             word.submit_datetime = datetime.now()
