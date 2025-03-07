@@ -8,10 +8,10 @@ from models import GameModel, WordModel
 from schemas import GameSchema, GameUpdateSchema, WordSchema
 
 
-blp = Blueprint("Games", __name__, description="Blueprint for /game endpoints")
+blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
 
 
-@blp.route("/game/<int:game_id>")
+@blp.route('/game/<int:game_id>')
 class Game(MethodView):
     @blp.response(200, GameSchema)
     def get(self, game_id):
@@ -34,7 +34,7 @@ class Game(MethodView):
             db.session.commit()
             return game
         except SQLAlchemyError:
-            abort(500, message="Unable to post to SQL database.")
+            abort(500, message='Unable to post to SQL database.')
 
     # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
     # TODO: Flag game/word links to be deleted as well.
@@ -43,7 +43,7 @@ class Game(MethodView):
     def delete(self, game_id: str):
         jwt = get_jwt()
         if not jwt.get('is_admin'):
-            abort(403, message="Permission denied. Admin privelege required.")
+            abort(403, message='Permission denied. Admin privelege required.')
 
         game = GameModel.query.get_or_404(game_id)
         try:
@@ -51,10 +51,10 @@ class Game(MethodView):
             db.session.commit()
             return {}
         except KeyError:
-            abort(404, message=f"Game with ID {game_id} not found.")
+            abort(404, message=f'Game with ID {game_id} not found.')
 
 
-@blp.route("/game")
+@blp.route('/game')
 class GameList(MethodView):
     @blp.response(200, GameSchema(many=True))
     def get(self):
@@ -70,10 +70,10 @@ class GameList(MethodView):
             db.session.commit()
             return game
         except SQLAlchemyError:
-            abort(500, message="Unable to post to database.")
+            abort(500, message='Unable to post to database.')
 
 
-@blp.route("/game/<int:game_id>/word")
+@blp.route('/game/<int:game_id>/word')
 class GameWordsList(MethodView):
     @blp.response(200, WordSchema(many=True))
     def get(self, game_id: int):
@@ -84,7 +84,7 @@ class GameWordsList(MethodView):
             return []
     
 
-@blp.route("/game/<int:game_id>/word/<int:word_id>")
+@blp.route('/game/<int:game_id>/word/<int:word_id>')
 class LinkGameToWord(MethodView):
     # TODO: Decide if this is allowable by anyone or any user with token.
     @jwt_required()
@@ -99,7 +99,7 @@ class LinkGameToWord(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Unable to link game and word in database.")
+            abort(500, message='Unable to link game and word in database.')
     
     # TODO: Figure out some kind of rule/permission restriction so not anyone can make these deletes.
     @jwt_required()
@@ -108,7 +108,7 @@ class LinkGameToWord(MethodView):
 
         jwt = get_jwt()
         if not jwt.get('is_admin'):
-            abort(401, message="Permission denied. Admin privelege required.")
+            abort(401, message='Permission denied. Admin privelege required.')
 
         game = GameModel.query.get_or_404(game_id)
         word = WordModel.query.get_or_404(word_id)
@@ -119,4 +119,4 @@ class LinkGameToWord(MethodView):
             db.session.commit()
             return {}
         except SQLAlchemyError:
-            abort(500, message="Unable to delete game and word link in database.")
+            abort(500, message='Unable to delete game and word link in database.')

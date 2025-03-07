@@ -8,10 +8,10 @@ from db import db
 from models import WordModel, GameModel
 from schemas import WordSchema, WordUpdateSchema, GameSchema
 
-blp = Blueprint("Words", __name__, description="Blueprint for /word endpoints")
+blp = Blueprint('Words', __name__, description='Blueprint for /word endpoints')
 
 
-@blp.route("/word/<string:word_id>")
+@blp.route('/word/<string:word_id>')
 class Word(MethodView):
     @blp.response(200, WordSchema)
     def get(self, word_id: int):
@@ -26,7 +26,7 @@ class Word(MethodView):
         jwt = get_jwt()
         current_user = get_jwt_identity()
         if not jwt.get('is_admin') and not current_user == str(word.author_id):
-            abort(403, message="Permission denied. User does not have permission to alter word.")
+            abort(403, message='Permission denied. User does not have permission to alter word.')
         if word:
             word.word = request_payload['word'] if 'word' in request_payload else word.word
             word.definition = request_payload['definition'] if 'definition' in request_payload else word.definition
@@ -41,7 +41,7 @@ class Word(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Could not save word to database.")
+            abort(500, message='Could not save word to database.')
     
     # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
     @jwt_required()
@@ -50,17 +50,17 @@ class Word(MethodView):
         jwt = get_jwt()
         current_user = get_jwt_identity()
         if not jwt.get('is_admin') and not current_user == str(word.author_id):
-            abort(403, message="Permission denied. User does not have permission to alter word.")
+            abort(403, message='Permission denied. User does not have permission to alter word.')
         word = WordModel.query.get_or_404(word_id)
         try:
             db.session.delete(word)
             db.session.commit()
             return {}
         except SQLAlchemyError:
-            abort(500, message=f"Word with ID {word_id} could not be deleted from database.")
+            abort(500, message=f'Word with ID {word_id} could not be deleted from database.')
 
 
-@blp.route("/word")
+@blp.route('/word')
 class WordAdd(MethodView):
     @blp.response(200, WordSchema(many=True))
     def get(self):
@@ -79,10 +79,10 @@ class WordAdd(MethodView):
             db.session.commit()
             return word
         except SQLAlchemyError:
-            abort(500, message="Unable to save word to database.")
+            abort(500, message='Unable to save word to database.')
 
 
-@blp.route("/word/<int:word_id>/game")
+@blp.route('/word/<int:word_id>/game')
 class WordGamesList(MethodView):
     @blp.response(200, GameSchema(many=True))
     def get(self, word_id: int):

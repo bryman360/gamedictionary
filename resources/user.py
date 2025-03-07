@@ -11,31 +11,32 @@ from models import UserModel
 from schemas import UserSchema, UserUpdateSchema
 
 
-blp = Blueprint("Users", __name__, description="Blueprint for user operations")
+blp = Blueprint('Users', __name__, description='Blueprint for user operations')
 
 
-@blp.route("/register")
+@blp.route('/register')
 class UserRegistration(MethodView):
     @blp.arguments(UserSchema)
     def post(self, request_payload):
         if UserModel.query.filter(UserModel.username == request_payload['username']).first():
-            abort(409, message="A user with that username already exists.")
+            abort(409, message='A user with that username already exists.')
         hashed_password = pbkdf2_sha256.hash(request_payload['password'])
 
-        user = UserModel(username=request_payload["username"], password=hashed_password)
+        user = UserModel(username=request_payload['username'], password=hashed_password)
 
         try:
             db.session.add(user)
             db.session.commit()
             return {
-                'message': "User successfully registered.",
-                'access_token': create_access_token(identity=str(user.user_id))
+                'message': 'User successfully registered.',
+                'access_token': create_access_token(identity=str(user.user_id), fresh=True),
+                'refresh_token': create_refresh_token(identity=str(user.user_id))
             }, 201
         except SQLAlchemyError:
-            abort(500, message="Unable to save user to database.")
+            abort(500, message='Unable to save user to database.')
 
 
-@blp.route("/user/<int:user_id>")
+@blp.route('/user/<int:user_id>')
 class User(MethodView):
     @blp.response(200, UserSchema)
     def get(self, user_id: int):
@@ -47,26 +48,28 @@ class User(MethodView):
         jwt = get_jwt()
         current_user = get_jwt_identity()
         if not jwt.get('is_admin') and not current_user == str(user_id):
-            abort(403, message=f"Permission denied, user id does not match account id")
+            abort(403, message=f'Permission denied, user id does not match account id')
 
         user = UserModel.query.get_or_404(user_id)
+        status_code = 202
         
         if not user:
             user = UserModel(**request_payload)
+            status_code = 201
         else:
             user.password = pbkdf2_sha256.hash(request_payload['password']) if 'password' in request_payload else user.password
             if 'username' in request_payload:
                 if UserModel.query.filter(UserModel.username == request_payload['username']).first():
-                    abort(409, message="A user with that username already exists.")
+                    abort(409, message='A user with that username already exists.')
                 else:
                     user.username = request_payload['username']
 
         try:
             db.session.add(user)
             db.session.commit()
-            return {'message': "User successfully updated."}, 200
+            return {'message': 'User successfully updated.'}, status_code
         except SQLAlchemyError:
-            abort(500, message="Unable to update user in database.")
+            abort(500, message='Unable to update user in database.')
 
 
     # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
@@ -76,20 +79,20 @@ class User(MethodView):
         jwt = get_jwt()
         current_user = get_jwt_identity()
         if not jwt.get('is_admin') and not current_user == str(user_id):
-            abort(403, message="Permission denied, user id does not match account id.")
+            abort(403, message='Permission denied, user id does not match account id.')
 
         user = UserModel.query.get_or_404(user_id)
 
         try:
             db.session.delete(user)
-            db.session.commit(user)
+            db.session.commit()
             #TODO: Expire token.
             return {}
         except SQLAlchemyError:
-            abort(500, message="Unable to delete user from database.")
+            abort(500, message='Unable to delete user from database.')
 
 
-@blp.route("/login")
+@blp.route('/login')
 class UserLogin(MethodView):
     @blp.arguments(UserSchema)
     def post(self, request_payload):
@@ -98,20 +101,21 @@ class UserLogin(MethodView):
             access_token = create_access_token(identity=str(user.user_id), fresh=True)
             refresh_token = create_refresh_token(identity=str(user.user_id))
             return {'access_token': access_token, 'refresh_token': refresh_token}
-        abort(401, message="Invalid login credentials.")
+        abort(401, message='Invalid login credentials.')
 
 
-@blp.route("/logout")
+@blp.route('/logout')
 class UserLogout(MethodView):
     @jwt_required()
     def post(self):
         jwt = get_jwt()
         jti = jwt.get('jti')
         BLOCKLIST.add(jti)
-        return {'message': "Successfully logged out."}
+        return {'message': 'Successfully logged out.'}
     
+
 # TODO: Change refresh tokens to maybe be server side?
-@blp.route("/refresh")
+@blp.route('/refresh')
 class UserRefresh(MethodView):
     @jwt_required(refresh=True)
     def post(self):
