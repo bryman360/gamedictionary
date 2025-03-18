@@ -2,6 +2,7 @@ import os
 
 from flask import Flask, jsonify
 from flask_jwt_extended import JWTManager
+from flask_migrate import Migrate
 from flask_smorest import Api
 from dotenv import load_dotenv
 
@@ -32,6 +33,7 @@ def create_app(db_url=None):
 
 
     db.init_app(app)
+    migrate = Migrate(app, db)
     api = Api(app)
     jwt = JWTManager(app)
 
