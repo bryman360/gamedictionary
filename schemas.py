@@ -30,7 +30,7 @@ class PlainUserSchema(Schema):
 # ------------------------------------------------------------
 
 class WordSchema(PlainWordSchema):
-    author_id = fields.Int(required=True, load_only=True)
+    author_id = fields.Int(dump_only=True)
     user = fields.Nested(PlainUserSchema(), dump_only=True)
     games = fields.Nested(PlainGameSchema(), dump_only=True)
 

@@ -11,7 +11,7 @@ from schemas import WordSchema, WordUpdateSchema, GameSchema
 blp = Blueprint('Words', __name__, description='Blueprint for /word endpoints')
 
 
-@blp.route('/word/<string:word_id>')
+@blp.route('/word/<int:word_id>')
 class Word(MethodView):
     @blp.response(200, WordSchema)
     def get(self, word_id: int):
@@ -49,9 +49,9 @@ class Word(MethodView):
     def delete(self, word_id: int):
         jwt = get_jwt()
         current_user = get_jwt_identity()
+        word = WordModel.query.get_or_404(word_id)
         if not jwt.get('is_admin') and not current_user == str(word.author_id):
             abort(403, message='Permission denied. User does not have permission to alter word.')
-        word = WordModel.query.get_or_404(word_id)
         try:
             db.session.delete(word)
             db.session.commit()
@@ -70,9 +70,11 @@ class WordAdd(MethodView):
     @blp.arguments(WordSchema)
     @blp.response(201, WordSchema)
     def post(self, request_payload: dict):
+        current_user = get_jwt_identity()
         word = WordModel(**request_payload)
         word.submit_datetime = datetime.now()
         word.published = False
+        word.author_id = current_user
 
         try:
             db.session.add(word)

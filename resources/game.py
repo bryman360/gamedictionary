@@ -42,10 +42,10 @@ class Game(MethodView):
     @blp.response(204)
     def delete(self, game_id: str):
         jwt = get_jwt()
+        game = GameModel.query.get_or_404(game_id)
         if not jwt.get('is_admin'):
             abort(403, message='Permission denied. Admin privelege required.')
 
-        game = GameModel.query.get_or_404(game_id)
         try:
             db.session.delete(game)
             db.session.commit()
