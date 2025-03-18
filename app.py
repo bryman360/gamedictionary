@@ -21,12 +21,12 @@ def create_app(db_url=None):
     app = Flask(__name__)
 
     app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.config['API_TITLE'] = "Game Dict REST API"
-    app.config['API_VERSION'] = "v1"
-    app.config['OPENAPI_VERSION'] = "3.0.3"
-    app.config['OPENAPI_URL_PREFIX'] = "/"
-    app.config['OPENAPI_SWAGGER_UI_PATH'] = "/swagger-ui"
-    app.config['OPENAPI_SWAGGER_UI_URL'] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    app.config['API_TITLE'] = 'Game Dict REST API'
+    app.config['API_VERSION'] = 'v1'
+    app.config['OPENAPI_VERSION'] = '3.0.3'
+    app.config['OPENAPI_URL_PREFIX'] = '/'
+    app.config['OPENAPI_SWAGGER_UI_PATH'] = '/swagger-ui'
+    app.config['OPENAPI_SWAGGER_UI_URL'] = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url or os.getenv('DATABASE_URL', 'sqlite:///data.db')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 
@@ -35,11 +35,11 @@ def create_app(db_url=None):
     api = Api(app)
     jwt = JWTManager(app)
 
-    # TODO: Convert from "identity==1" check to looking in DB for an actual admin flag (not setup yet)
+    # TODO: Convert from 'identity==1' check to looking in DB for an actual admin flag (not setup yet)
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):
         additional_claims = {}
-        if identity == "1":
+        if identity == '1':
             additional_claims['is_admin'] = True
         return additional_claims
 
@@ -48,8 +48,8 @@ def create_app(db_url=None):
         return (
             jsonify(
                 {
-                    "message": "Access token expired.",
-                    "error": "token_expired"
+                    'message': 'Access token expired.',
+                    'error': 'token_expired'
                 }
             ),
             401
@@ -64,8 +64,8 @@ def create_app(db_url=None):
         return (
             jsonify(
                 {
-                    "message": "The token has been revoked.",
-                    "error": "token_revoked"
+                    'message': 'The token has been revoked.',
+                    'error': 'token_revoked'
                 }
             )
         )
@@ -75,8 +75,8 @@ def create_app(db_url=None):
         return (
             jsonify(
                 {
-                    "message": "Request does not contain an access token.",
-                    "error": "authorization_required"    
+                    'message': 'Request does not contain an access token.',
+                    'error': 'authorization_required'    
                 }
             ),
             401
@@ -87,16 +87,16 @@ def create_app(db_url=None):
         return (
             jsonify(
                 {
-                    "message": "The token is not fresh.",
-                    "error": "token_not_fresh"
+                    'message': 'The token is not fresh.',
+                    'error': 'token_not_fresh'
                 }
             )
         )
 
-    @app.before_request
-    def create_tables():
-        app.before_request_funcs[None].remove(create_tables)
-        db.create_all()
+    # @app.before_request
+    # def create_tables():
+    #     app.before_request_funcs[None].remove(create_tables)
+    #     db.create_all()
 
     api.register_blueprint(GameBlueprint)
     api.register_blueprint(WordBlueprint)
