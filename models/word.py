@@ -15,3 +15,6 @@ class WordModel(db.Model):
 
     user = db.relationship('UserModel', back_populates='words')
     games = db.relationship('GameModel', back_populates='words', secondary='games_words')
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
