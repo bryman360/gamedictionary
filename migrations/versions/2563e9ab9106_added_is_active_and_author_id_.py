@@ -26,7 +26,7 @@ def upgrade():
 
     with op.batch_alter_table('words', schema=None) as batch_op:
         batch_op.add_column(sa.Column('is_active', sa.Boolean(), nullable=False))
-        batch_op.create_foreign_key(None, 'users', ['author_id'], ['user_id'])
+        batch_op.create_foreign_key('fk_words_author_id_users', 'users', ['author_id'], ['user_id'])
 
     # ### end Alembic commands ###
 
