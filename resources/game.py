@@ -79,7 +79,7 @@ class GameList(MethodView):
 @blp.route('/games/search')
 class GamesSearch(MethodView):
     @blp.arguments(GamesSearchSchema, location='query')
-    @blp.response(200, GameSchema(many=True))
+    @blp.response(200, GameSearchResultSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
