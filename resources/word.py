@@ -4,18 +4,20 @@ from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
 
+from flask import request
+
 from db import db
 from models import WordModel, GameModel
-from schemas import WordSchema, WordUpdateSchema, GameSchema
+from schemas import WordSchema, WordUpdateSchema, GameSchema, WordsSearchSchema
 
-blp = Blueprint('Words', __name__, description='Blueprint for /word endpoints')
+blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
 
 
-@blp.route('/word/<int:word_id>')
+@blp.route('/words/<int:word_id>')
 class Word(MethodView):
     @blp.response(200, WordSchema)
     def get(self, word_id: int):
-        return WordModel.query.get_or_404(word_id)
+        return WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
 
     @jwt_required()
     @blp.arguments(WordUpdateSchema)
@@ -35,6 +37,7 @@ class Word(MethodView):
             word = WordModel(**request_payload)
             word.submit_datetime = datetime.now()
             word.published = False
+        word.is_active = True
 
         try:
             db.session.add(word)
@@ -52,15 +55,17 @@ class Word(MethodView):
         word = WordModel.query.get_or_404(word_id)
         if not jwt.get('is_admin') and not current_user == str(word.author_id):
             abort(403, message='Permission denied. User does not have permission to alter word.')
+        
+        word.is_active = False
         try:
-            db.session.delete(word)
+            db.session.add(word)
             db.session.commit()
             return {}
         except SQLAlchemyError:
             abort(500, message=f'Word with ID {word_id} could not be deleted from database.')
 
 
-@blp.route('/word')
+@blp.route('/words')
 class WordAdd(MethodView):
     @blp.response(200, WordSchema(many=True))
     def get(self):
@@ -74,7 +79,8 @@ class WordAdd(MethodView):
         word = WordModel(**request_payload)
         word.submit_datetime = datetime.now()
         word.published = False
-        word.author_id = current_user
+        word.author_id = int(current_user)
+        word.is_active = True
 
         try:
             db.session.add(word)
@@ -82,13 +88,56 @@ class WordAdd(MethodView):
             return word
         except SQLAlchemyError:
             abort(500, message='Unable to save word to database.')
+            
+
+# @blp.route('/word/<int:word_id>/flag')
+# class Word(MethodView):
+#     @jwt_required()
+#     @blp.arguments(WordUpdateSchema)
+#     @blp.response(200, WordSchema)
+#     def post(self, request_payload: dict, word_id: int):
+
+#         word = WordModel.query.get_or_404(word_id)
+#         # word.flag_count = word.flag_count + 1
+
+#         try:
+#             db.session.add(word)
+#             db.session.commit()
+#             return word
+#         except SQLAlchemyError:
+#             abort(500, message='Could not save word to database.')
 
 
-@blp.route('/word/<int:word_id>/game')
+@blp.route('/words/<int:word_id>/game')
 class WordGamesList(MethodView):
     @blp.response(200, GameSchema(many=True))
     def get(self, word_id: int):
-        word = WordModel.query.get_or_404(word_id)
-        if word.games:
-            return word.games
-        return []
+        word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
+        games_list = []
+        for game in word.games:
+            if game.is_active:
+                games_list.append(game)
+            if len(games_list) >= 20:
+                break
+        return games_list
+    
+
+@blp.route('/words/search')
+class WordSearch(MethodView):
+    @blp.arguments(WordsSearchSchema, location='query')
+    @blp.response(200, WordSchema(many=True))
+    def get(self, args: dict):
+        page = args['page'] if 'page' in args else 1
+        page = max(page, 1)
+        word = args['word']
+        
+        return WordModel.query.filter(WordModel.word.ilike('%' + word + '%')).limit(15).offset((page - 1) * 15).all()
+
+# Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
+# Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
+# How to update with Wiki/Image URL if not done on initial post?
+# Can straight delete the games_words_links... BUT WHO CAN DO THIS? And how? And when?
+# Need flags for words (and maybe games?)
+# Flags need to be only usable by signed in persons
+# Need Upvotes/Downvotes for words (and maybe games?)
+# Do NOT need to login for Upvotes/Downvotes (use Frontend Local Storage to track if user "voted" on it)
