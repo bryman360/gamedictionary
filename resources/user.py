@@ -18,11 +18,13 @@ blp = Blueprint('Users', __name__, description='Blueprint for user operations')
 class UserRegistration(MethodView):
     @blp.arguments(UserSchema)
     def post(self, request_payload):
-        if UserModel.query.filter(UserModel.username == request_payload['username']).first():
+        user_lookup = UserModel.query.filter(UserModel.username == request_payload['username']).first()
+        if user_lookup and user_lookup.is_active:
             abort(409, message='A user with that username already exists.')
         hashed_password = pbkdf2_sha256.hash(request_payload['password'])
 
         user = UserModel(username=request_payload['username'], password=hashed_password)
+        user.is_active = True
 
         try:
             db.session.add(user)
@@ -36,7 +38,7 @@ class UserRegistration(MethodView):
             abort(500, message='Unable to save user to database.')
 
 
-@blp.route('/user/<int:user_id>')
+@blp.route('/users/<int:user_id>')
 class User(MethodView):
     @blp.response(200, UserSchema)
     def get(self, user_id: int):
@@ -82,9 +84,10 @@ class User(MethodView):
             abort(403, message='Permission denied, user id does not match account id.')
 
         user = UserModel.query.get_or_404(user_id)
+        user.is_active = False
 
         try:
-            db.session.delete(user)
+            db.session.add(user)
             db.session.commit()
             #TODO: Expire token.
             return {}
