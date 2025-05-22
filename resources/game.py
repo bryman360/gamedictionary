@@ -23,7 +23,7 @@ class Game(MethodView):
     @blp.arguments(GameUpdateSchema)
     @blp.response(201, GameSchema)
     def put(self, request_payload, game_id):
-        game = GameModel.query.get(game_id)
+        game = GameModel.query.filter_by(is_active=True).get(game_id)
         if game:
             game.game_name = request_payload['game_name'] if 'game_name' in request_payload else game.game_name
             game.wiki_url = request_payload['wiki_url'] if 'wiki_url' in request_payload else game.wiki_url
@@ -60,7 +60,7 @@ class Game(MethodView):
 class GameList(MethodView):
     @blp.response(200, GameSchema(many=True))
     def get(self):
-        return GameModel.query.all()
+        return GameModel.query.filter_by(is_active=True).all()
 
     @jwt_required()
     @blp.arguments(GameSchema)
@@ -84,7 +84,7 @@ class GamesSearch(MethodView):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
 
-        filters = []
+        filters = [GameModel.is_active.is_(True)]
         if 'startsWith' in args:
             filters.append(GameModel.game_name.ilike(args['startsWith'] + '%'))
         if 'name' in args:
@@ -145,8 +145,8 @@ class LinkGameToWord(MethodView):
     @jwt_required()
     @blp.response(201, WordSchema)
     def post(self, game_id: int, word_id: int):
-        game = GameModel.query.get_or_404(game_id)
-        word = WordModel.query.get_or_404(word_id)
+        game = GameModel.query.filter_by(is_active=True).get_or_404(game_id)
+        word = WordModel.query.filter_by(is_active=True).get_or_404(word_id)
 
         game.words.append(word)
         try:
