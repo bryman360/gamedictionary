@@ -6,8 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from db import db
 from models import GameModel, WordModel, GamesWordsModel
-from schemas import GameSchema, GameUpdateSchema, WordSchema, GamesSearchSchema, WordsSearchSchema
-from util import unpackWordModel
+from schemas import GameSchema, GameUpdateSchema, WordSchema, GamesSearchSchema, WordsSearchSchema, GameSearchResultSchema
 
 
 blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
@@ -80,6 +79,7 @@ class GameList(MethodView):
 @blp.route('/games/search')
 class GamesSearch(MethodView):
     @blp.arguments(GamesSearchSchema, location='query')
+    @blp.response(200, GameSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
@@ -106,7 +106,7 @@ class GamesSearch(MethodView):
             game_result['words'] = game_word_results
             results.append(game_result)
 
-        return results, 200
+        return results
 
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):

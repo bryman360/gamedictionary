@@ -35,7 +35,7 @@ class PlainUserSchema(Schema):
 class WordSchema(PlainWordSchema):
     author_id = fields.Int(dump_only=True)
     user = fields.Nested(PlainUserSchema(), dump_only=True)
-    games = fields.Nested(PlainGameSchema(), dump_only=True)
+    games = fields.Nested(PlainGameSchema(), dump_only=True, many=True)
 
 class GameSchema(PlainGameSchema):
     words = fields.Nested(PlainWordSchema(), dump_only=True)
@@ -69,16 +69,7 @@ class UserUpdateSchema(Schema):
 
 
 # ------------------------------------------------------------
-# Minimum Info Schemas
-# ------------------------------------------------------------
-
-class MinimumWordSchema(Schema):
-    word_id = fields.Str()
-    word = fields.Str()
-
-
-# ------------------------------------------------------------
-# Search Schemas
+# Search Query Schemas
 # ------------------------------------------------------------
 
 class WordsSearchSchema(Schema):
@@ -97,4 +88,4 @@ class GamesSearchSchema(Schema):
 # ------------------------------------------------------------
 
 class GameSearchResultSchema(PlainGameSchema):
-    words = fields.Nested(MinimumWordSchema)
+    words = fields.Nested(PlainWordSchema, many=True)
