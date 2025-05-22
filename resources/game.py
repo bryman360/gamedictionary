@@ -112,9 +112,7 @@ class GamesSearch(MethodView):
 class GameWordsList(MethodView):
     @blp.response(200, WordSchema(many=True))
     def get(self, game_id: int):
-        game = GameModel.query.get_or_404(game_id)
-        if not game.is_active:
-            abort(404)
+        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
         
         if game.words:
             words_ouptut = []
