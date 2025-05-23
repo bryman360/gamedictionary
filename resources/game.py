@@ -94,11 +94,27 @@ class GamesSearch(MethodView):
             filters.append(GameModel.game_name.ilike('%' + args['name'] + '%'))
 
 
-        first_query = select(GameModel.game_id, GameModel.game_name).where(*filters).offset(per_page * (page - 1)).limit(per_page)
-        second_query = select(first_query.c.game_id, first_query.c.game_name, GamesWordsModel.word_id,
-                              func.row_number().over(partition_by=first_query.c.game_id).label('rn')).join(GamesWordsModel)
+        first_query = select(
+                GameModel.game_id,
+                GameModel.game_name
+            ).where(*filters
+            ).offset(per_page * (page - 1)
+            ).limit(per_page)
+        second_query = select(
+                first_query.c.game_id,
+                first_query.c.game_name,
+                GamesWordsModel.word_id,
+                func.row_number().over(partition_by=first_query.c.game_id).label('rn')
+            ).join(GamesWordsModel)
+        
         # Must be Game_id, Game_name, word_id, word
-        last_query = select(second_query.c.game_id, second_query.c.game_name, WordModel.word_id, WordModel.word).join(WordModel).where(second_query.c.rn<=4)
+        last_query = select(
+                second_query.c.game_id,
+                second_query.c.game_name,
+                WordModel.word_id,
+                WordModel.word
+            ).join(WordModel
+            ).where(second_query.c.rn<=4)
 
 
         query_results = [row for row in db.engine.connect().execute(last_query)]
@@ -125,21 +141,27 @@ class GameWordsList(MethodView):
         page = max(page, 1)
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
 
-        games_words_query = select(GamesWordsModel.word_id,
-                                   WordModel.word,
-                                   WordModel.definition,
-                                   WordModel.example,
-                                   WordModel.submit_datetime,
-                                   WordModel.author_id,
-                            ).join(WordModel).where(
-                                GamesWordsModel.game_id.is_(game_id), WordModel.is_active.is_(True)
-                            ).offset(per_page * (page - 1)
-                            ).limit(per_page)
+        games_words_query = select(
+                GamesWordsModel.word_id,
+                WordModel.word,
+                WordModel.definition,
+                WordModel.example,
+                WordModel.submit_datetime,
+                WordModel.author_id,
+            ).join(WordModel).where(
+                GamesWordsModel.game_id.is_(game_id),
+                WordModel.is_active.is_(True)
+            ).offset(per_page * (page - 1)
+            ).limit(per_page)
         
-        games_words_with_authors_query = select(games_words_query.c, UserModel.username).join(UserModel)
+        games_words_with_authors_query = select(
+                games_words_query.c,
+                UserModel.username
+            ).join(UserModel)
 
         query_results = [row for row in db.engine.connect().execute(games_words_with_authors_query)]
         output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+
         for query_row in query_results:
             word_object = {'word_id': query_row[0],
                            'word': query_row[1],
