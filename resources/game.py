@@ -100,14 +100,13 @@ class GamesSearch(MethodView):
             ).where(*filters
             ).offset(per_page * (page - 1)
             ).limit(per_page)
+        
         second_query = select(
-                first_query.c.game_id,
-                first_query.c.game_name,
+                first_query.c,
                 GamesWordsModel.word_id,
                 func.row_number().over(partition_by=first_query.c.game_id).label('rn')
             ).join(GamesWordsModel)
         
-        # Must be Game_id, Game_name, word_id, word
         last_query = select(
                 second_query.c.game_id,
                 second_query.c.game_name,
@@ -124,12 +123,16 @@ class GamesSearch(MethodView):
         game_objects = {}
         output_results = []
         for query_row in query_results:
-            if query_row[0] not in game_objects:
-                game_objects[query_row[0]] = {'game_id': query_row[0], 'game_name': query_row[1], 'words': []}
-            game_objects[query_row[0]]['words'].append({'word_id': query_row[2], 'word': query_row[3]})
+            row_game_id = query_row[0]
+            row_game_name = query_row[1]
+            row_word_id = query_row[2]
+            row_word = query_row[3]
+            if row_game_id not in game_objects:
+                game_objects[row_game_id] = {'game_id': row_game_id, 'game_name': row_game_name, 'words': []}
+            game_objects[row_game_id]['words'].append({'word_id': row_word_id, 'word': row_word})
 
-        for game_object in game_objects:
-            output_results.append(game_objects[game_object])
+        for game_id in game_objects:
+            output_results.append(game_objects[game_id])
 
         return output_results, 200
 
@@ -169,7 +172,7 @@ class GameWordsList(MethodView):
                            'example': query_row[3],
                            'submit_datetime': query_row[4],
                            'author_id': query_row[5],
-                           'author_username': query_row[6]}
+                           'author_username': query_row[-1]}
             output_object['words'].append(word_object)
 
 
