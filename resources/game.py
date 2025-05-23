@@ -3,11 +3,14 @@ from flask.views import MethodView
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import select, func
 
 from db import db
-from models import GameModel, WordModel, GamesWordsModel
+from models import GameModel, WordModel, GamesWordsModel, UserModel
 from schemas import GameSchema, GameUpdateSchema, WordSchema, GamesSearchSchema, WordsSearchSchema, GameSearchResultSchema
 
+per_game = 4
+per_page = 15
 
 blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
 
@@ -79,7 +82,7 @@ class GameList(MethodView):
 @blp.route('/games/search')
 class GamesSearch(MethodView):
     @blp.arguments(GamesSearchSchema, location='query')
-    @blp.response(200, GameSearchResultSchema(many=True))
+    # @blp.response(200, GameSearchResultSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
@@ -90,40 +93,65 @@ class GamesSearch(MethodView):
         if 'name' in args:
             filters.append(GameModel.game_name.ilike('%' + args['name'] + '%'))
 
-        top_15_games = GameModel.query.filter(*filters).limit(15).offset((page - 1) * 15).all()
 
-        
-        results = []
-        for game in top_15_games:
-            game_result = {'game_id': game.game_id, 'game_name': game.game_name}
-            game_word_results = []
-            print(game.words)
+        first_query = select(GameModel.game_id, GameModel.game_name).where(*filters).offset(per_page * (page - 1)).limit(per_page)
+        second_query = select(first_query.c.game_id, first_query.c.game_name, GamesWordsModel.word_id,
+                              func.row_number().over(partition_by=first_query.c.game_id).label('rn')).join(GamesWordsModel)
+        # Must be Game_id, Game_name, word_id, word
+        last_query = select(second_query.c.game_id, second_query.c.game_name, WordModel.word_id, WordModel.word).join(WordModel).where(second_query.c.rn<=4)
 
-            for word in game.words:
-                game_word_results.append({'word_id': word.word_id, 'word': word.word})
-                if len(game_word_results) == 3:
-                    break
-            game_result['words'] = game_word_results
-            results.append(game_result)
 
-        return results
+        query_results = [row for row in db.engine.connect().execute(last_query)]
+        if not query_results:
+            abort(404)
+
+        game_objects = {}
+        output_results = []
+        for query_row in query_results:
+            if query_row[0] not in game_objects:
+                game_objects[query_row[0]] = {'game_id': query_row[0], 'game_name': query_row[1], 'words': []}
+            game_objects[query_row[0]]['words'].append({'word_id': query_row[2], 'word': query_row[3]})
+
+        for game_object in game_objects:
+            output_results.append(game_objects[game_object])
+
+        return output_results, 200
 
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
-    @blp.response(200, WordSchema(many=True))
-    def get(self, game_id: int):
+    @blp.arguments(WordsSearchSchema, location='query')
+    def get(self, args:dict, game_id: int):
+        page = args['page'] if 'page' in args else 1
+        page = max(page, 1)
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
+
+        games_words_query = select(GamesWordsModel.word_id,
+                                   WordModel.word,
+                                   WordModel.definition,
+                                   WordModel.example,
+                                   WordModel.submit_datetime,
+                                   WordModel.author_id,
+                            ).join(WordModel).where(
+                                GamesWordsModel.game_id.is_(game_id), WordModel.is_active.is_(True)
+                            ).offset(per_page * (page - 1)
+                            ).limit(per_page)
         
-        if game.words:
-            words_ouptut = []
-            for word in game.words:
-                if word.is_active:
-                    words_ouptut.append(word)
-                if len(words_ouptut) >= 20:
-                    break
-            return words_ouptut
-        else:
-            return []
+        games_words_with_authors_query = select(games_words_query.c, UserModel.username).join(UserModel)
+
+        query_results = [row for row in db.engine.connect().execute(games_words_with_authors_query)]
+        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+        for query_row in query_results:
+            word_object = {'word_id': query_row[0],
+                           'word': query_row[1],
+                           'definition': query_row[2],
+                           'example': query_row[3],
+                           'submit_datetime': query_row[4],
+                           'author_id': query_row[5],
+                           'author_username': query_row[6]}
+            output_object['words'].append(word_object)
+
+
+        return output_object, 200
     
 
 @blp.route('/games/<int:game_id>/words/search')
