@@ -9,7 +9,7 @@ from db import db
 from models import GameModel, WordModel, GamesWordsModel, UserModel
 from schemas import GameSchema, GameUpdateSchema, WordSchema, GamesSearchSchema, WordsSearchSchema, GameSearchResultSchema
 
-per_game = 4
+words_per_game = 4
 per_page = 15
 
 blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
@@ -114,7 +114,7 @@ class GamesSearch(MethodView):
                 WordModel.word_id,
                 WordModel.word
             ).join(WordModel
-            ).where(second_query.c.rn<=4)
+            ).where(second_query.c.rn<=words_per_game)
 
 
         query_results = [row for row in db.engine.connect().execute(last_query)]
