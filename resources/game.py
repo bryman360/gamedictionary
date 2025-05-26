@@ -13,7 +13,7 @@ from schemas import (GameSchema,
                      WordSchema,
                      GamesSearchSchema,
                      WordsSearchSchema,
-                     GameSearchResultSchema)
+                     GameWordsSearchResultSchema)
 
 words_per_game = 4
 per_page = 15
@@ -147,7 +147,7 @@ class GamesSearch(MethodView):
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
     @blp.arguments(WordsSearchSchema, location='query')
-    @blp.response(200, GameSearchResultSchema(exclude=['is_active']))
+    @blp.response(200, GameWordsSearchResultSchema(exclude=['is_active']))
     def get(self, args:dict, game_id: int):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
@@ -194,12 +194,32 @@ class GameWordsList(MethodView):
 @blp.route('/games/<int:game_id>/words/search')
 class GamesWordsSearch(MethodView):
     @blp.arguments(WordsSearchSchema, location='query')
-    @blp.response(200, WordSchema(many=True))
-    def get(self, game_id: int, args: dict):
+    @blp.response(200, GameWordsSearchResultSchema)
+    def get(self, args: dict, game_id: int):
         page = args['page'] if 'page' in args else 1
-        word = args['word']
+        page = max(page, 1)
+
+        filters = [WordModel.is_active.is_(True), GamesWordsModel.game_id.is_(game_id)]
+        if 'startsWith' in args:
+            filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
+        if 'word' in args:
+            filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
+
+
+        word_query = select(
+                GamesWordsModel.game_id,
+                WordModel
+            ).join(WordModel
+            ).where(*filters)
+
+        query_results = [row for row in db.engine.connect().execute(word_query)]
         
-        return WordModel.query.filter(WordModel.word.ilike('%' + word + '%')).limit(15).offset((page - 1) * 15).all()
+        game_name_query = GameModel.query.filter_by(game_id=game_id).first_or_404('Game not found')
+
+        print(query_results)
+        output_object = {'game_id': game_id, 'game_name': game_name_query.game_name, 'words': query_results}
+        
+        return output_object
     
 
 @blp.route('/games/<int:game_id>/words/<int:word_id>')
