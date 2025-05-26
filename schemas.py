@@ -90,7 +90,6 @@ class GamesSearchSchema(Schema):
 class WordWithUsernameSchema(PlainWordSchema):
     author_username = fields.Str()
     author_id = fields.Int(dump_only=True)
-    submit_datetime = fields.DateTime(format='%Y-%m-%dT%H:%M:%S%z', dump_only=True)
 
 # ------------------------------------------------------------
 # Search Result Schemas
