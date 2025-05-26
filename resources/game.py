@@ -155,7 +155,8 @@ class GameWordsList(MethodView):
 
         games_words_query = select(
                 WordModel
-            ).join(GamesWordsModel).where(
+            ).join(GamesWordsModel
+            ).where(
                 GamesWordsModel.game_id.is_(game_id),
                 WordModel.is_active.is_(True)
             ).offset(per_page * (page - 1)
@@ -198,6 +199,7 @@ class GamesWordsSearch(MethodView):
     def get(self, args: dict, game_id: int):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
+        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404('Game not found')
 
         filters = [WordModel.is_active.is_(True), GamesWordsModel.game_id.is_(game_id)]
         if 'startsWith' in args:
@@ -206,19 +208,42 @@ class GamesWordsSearch(MethodView):
             filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
 
 
-        word_query = select(
-                GamesWordsModel.game_id,
+        games_words_query = select(
                 WordModel
-            ).join(WordModel
-            ).where(*filters)
-
-        query_results = [row for row in db.engine.connect().execute(word_query)]
+            ).join(GamesWordsModel
+            ).where(*filters
+            ).offset(per_page * (page - 1)
+            ).limit(per_page)
         
-        game_name_query = GameModel.query.filter_by(game_id=game_id).first_or_404('Game not found')
+        words_with_author_username_query = select(
+                games_words_query.c,
+                UserModel.username
+            ).join(UserModel)
 
-        print(query_results)
-        output_object = {'game_id': game_id, 'game_name': game_name_query.game_name, 'words': query_results}
+        query_results = [row for row in db.engine.connect().execute(words_with_author_username_query)]
         
+        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+
+        for query_row in query_results:
+            row_word_id = query_row[0]
+            row_word = query_row[1]
+            row_definition = query_row[2]
+            row_example = query_row[3]
+            row_author_id = query_row[4]
+            row_submit_datetime = query_row[6]
+            row_author_username = query_row[-1]
+            print(query_row)
+            word_object = {'word_id': row_word_id,
+                           'word': row_word,
+                           'definition': row_definition,
+                           'example': row_example,
+                           'submit_datetime': row_submit_datetime,
+                           'author_id': row_author_id,
+                           'author_username': row_author_username}
+
+            output_object['words'].append(word_object)
+        
+
         return output_object
     
 
