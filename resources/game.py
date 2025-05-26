@@ -4,10 +4,16 @@ from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
+from datetime import datetime
 
 from db import db
 from models import GameModel, WordModel, GamesWordsModel, UserModel
-from schemas import GameSchema, GameUpdateSchema, WordSchema, GamesSearchSchema, WordsSearchSchema, GameSearchResultSchema
+from schemas import (GameSchema,
+                     GameUpdateSchema,
+                     WordSchema,
+                     GamesSearchSchema,
+                     WordsSearchSchema,
+                     GameSearchResultSchema)
 
 words_per_game = 4
 per_page = 15
@@ -128,7 +134,9 @@ class GamesSearch(MethodView):
             row_word_id = query_row[2]
             row_word = query_row[3]
             if row_game_id not in game_objects:
-                game_objects[row_game_id] = {'game_id': row_game_id, 'game_name': row_game_name, 'words': []}
+                game_objects[row_game_id] = {'game_id': row_game_id,
+                                             'game_name': row_game_name,
+                                             'words': []}
             game_objects[row_game_id]['words'].append({'word_id': row_word_id, 'word': row_word})
 
         for game_id in game_objects:
@@ -139,19 +147,15 @@ class GamesSearch(MethodView):
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
     @blp.arguments(WordsSearchSchema, location='query')
+    @blp.response(200, GameSearchResultSchema(exclude=['is_active']))
     def get(self, args:dict, game_id: int):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
 
         games_words_query = select(
-                GamesWordsModel.word_id,
-                WordModel.word,
-                WordModel.definition,
-                WordModel.example,
-                WordModel.submit_datetime,
-                WordModel.author_id,
-            ).join(WordModel).where(
+                WordModel
+            ).join(GamesWordsModel).where(
                 GamesWordsModel.game_id.is_(game_id),
                 WordModel.is_active.is_(True)
             ).offset(per_page * (page - 1)
@@ -166,17 +170,25 @@ class GameWordsList(MethodView):
         output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
 
         for query_row in query_results:
-            word_object = {'word_id': query_row[0],
-                           'word': query_row[1],
-                           'definition': query_row[2],
-                           'example': query_row[3],
-                           'submit_datetime': query_row[4],
-                           'author_id': query_row[5],
-                           'author_username': query_row[-1]}
+            row_word_id = query_row[0]
+            row_word = query_row[1]
+            row_definition = query_row[2]
+            row_example = query_row[3]
+            row_author_id = query_row[4]
+            row_submit_datetime = query_row[6]
+            row_author_username = query_row[-1]
+
+            word_object = {'word_id': row_word_id,
+                           'word': row_word,
+                           'definition': row_definition,
+                           'example': row_example,
+                           'submit_datetime': row_submit_datetime,
+                           'author_id': row_author_id,
+                           'author_username': row_author_username}
+
             output_object['words'].append(word_object)
 
-
-        return output_object, 200
+        return output_object
     
 
 @blp.route('/games/<int:game_id>/words/search')

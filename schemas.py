@@ -84,8 +84,19 @@ class GamesSearchSchema(Schema):
 
 
 # ------------------------------------------------------------
+# On the Fly Schemas (built after querying but before sending)
+# ------------------------------------------------------------
+
+class WordWithUsernameSchema(PlainWordSchema):
+    author_username = fields.Str()
+    author_id = fields.Int(dump_only=True)
+    submit_datetime = fields.DateTime(format='%Y-%m-%dT%H:%M:%S%z', dump_only=True)
+
+# ------------------------------------------------------------
 # Search Result Schemas
 # ------------------------------------------------------------
 
 class GameSearchResultSchema(PlainGameSchema):
-    words = fields.Nested(PlainWordSchema, many=True)
+    game_id = fields.Str()
+    game_name = fields.Str()
+    words = fields.Nested(WordWithUsernameSchema, many=True)
