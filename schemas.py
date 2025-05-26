@@ -72,13 +72,9 @@ class UserUpdateSchema(Schema):
 # Search Query Schemas
 # ------------------------------------------------------------
 
-class WordsSearchSchema(Schema):
-    word = fields.Str()
-    page = fields.Int()
-    startsWith = fields.Str()
-
-class GamesSearchSchema(Schema):
+class SearchSchema(Schema):
     name = fields.Str()
+    word = fields.Str()
     page = fields.Int()
     startsWith = fields.Str()
 

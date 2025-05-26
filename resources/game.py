@@ -11,8 +11,7 @@ from models import GameModel, WordModel, GamesWordsModel, UserModel
 from schemas import (GameSchema,
                      GameUpdateSchema,
                      WordSchema,
-                     GamesSearchSchema,
-                     WordsSearchSchema,
+                     SearchSchema,
                      GameWordsSearchResultSchema)
 
 words_per_game = 4
@@ -87,7 +86,7 @@ class GameList(MethodView):
 
 @blp.route('/games/search')
 class GamesSearch(MethodView):
-    @blp.arguments(GamesSearchSchema, location='query')
+    @blp.arguments(SearchSchema, location='query')
     # @blp.response(200, GameSearchResultSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
@@ -146,7 +145,7 @@ class GamesSearch(MethodView):
 
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
-    @blp.arguments(WordsSearchSchema, location='query')
+    @blp.arguments(SearchSchema, location='query')
     @blp.response(200, GameWordsSearchResultSchema(exclude=['is_active']))
     def get(self, args:dict, game_id: int):
         page = args['page'] if 'page' in args else 1
@@ -194,7 +193,7 @@ class GameWordsList(MethodView):
 
 @blp.route('/games/<int:game_id>/words/search')
 class GamesWordsSearch(MethodView):
-    @blp.arguments(WordsSearchSchema, location='query')
+    @blp.arguments(SearchSchema, location='query')
     @blp.response(200, GameWordsSearchResultSchema)
     def get(self, args: dict, game_id: int):
         page = args['page'] if 'page' in args else 1

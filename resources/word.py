@@ -8,7 +8,7 @@ from flask import request
 
 from db import db
 from models import WordModel, GameModel
-from schemas import WordSchema, WordUpdateSchema, GameSchema, WordsSearchSchema
+from schemas import WordSchema, WordUpdateSchema, GameSchema, SearchSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
 
@@ -117,14 +117,15 @@ class WordGamesList(MethodView):
         for game in word.games:
             if game.is_active:
                 games_list.append(game)
-            if len(games_list) >= 20:
+            if len(games_list) >= 3:
                 break
+            
         return games_list
     
 
 @blp.route('/words/search')
 class WordSearch(MethodView):
-    @blp.arguments(WordsSearchSchema, location='query')
+    @blp.arguments(SearchSchema, location='query')
     @blp.response(200, WordSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
