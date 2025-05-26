@@ -69,7 +69,7 @@ class UserUpdateSchema(Schema):
 
 
 # ------------------------------------------------------------
-# Search Query Schemas
+# Search Query Schema
 # ------------------------------------------------------------
 
 class SearchSchema(Schema):
@@ -87,11 +87,16 @@ class WordWithUsernameSchema(PlainWordSchema):
     author_username = fields.Str()
     author_id = fields.Int(dump_only=True)
 
+class WordAndWordIdSchema(Schema):
+    word_id = fields.Str(dump_only=True)
+    word = fields.Str(dump_only=True)
+
 # ------------------------------------------------------------
 # Search Result Schemas
 # ------------------------------------------------------------
 
 class GameWordsSearchResultSchema(PlainGameSchema):
-    game_id = fields.Str()
-    game_name = fields.Str()
     words = fields.Nested(WordWithUsernameSchema, many=True)
+
+class GamesSearchResultSchema(PlainGameSchema):
+    words = fields.Nested(WordAndWordIdSchema, many=True)

@@ -12,6 +12,7 @@ from schemas import (GameSchema,
                      GameUpdateSchema,
                      WordSchema,
                      SearchSchema,
+                     GamesSearchResultSchema,
                      GameWordsSearchResultSchema)
 
 words_per_game = 4
@@ -87,7 +88,7 @@ class GameList(MethodView):
 @blp.route('/games/search')
 class GamesSearch(MethodView):
     @blp.arguments(SearchSchema, location='query')
-    # @blp.response(200, GameSearchResultSchema(many=True))
+    @blp.response(200, GamesSearchResultSchema(many=True))
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
@@ -141,7 +142,7 @@ class GamesSearch(MethodView):
         for game_id in game_objects:
             output_results.append(game_objects[game_id])
 
-        return output_results, 200
+        return output_results
 
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
