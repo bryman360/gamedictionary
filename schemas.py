@@ -96,7 +96,7 @@ class WordWithUsernameSchema(PlainWordSchema):
 # Search Result Schemas
 # ------------------------------------------------------------
 
-class GameSearchResultSchema(PlainGameSchema):
+class GameWordsSearchResultSchema(PlainGameSchema):
     game_id = fields.Str()
     game_name = fields.Str()
     words = fields.Nested(WordWithUsernameSchema, many=True)
