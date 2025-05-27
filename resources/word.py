@@ -20,7 +20,16 @@ query_limit = 15
 class Word(MethodView):
     @blp.response(200, WordSchema)
     def get(self, word_id: int):
-        return WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
+        word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
+        print(word, word.games)
+        games_to_return = []
+        for game in word.games:
+            if game.is_active:
+                games_to_return.append(game)
+        print(games_to_return)
+        word.games = games_to_return
+    
+        return word
 
     @jwt_required()
     @blp.arguments(WordUpdateSchema)
@@ -109,22 +118,6 @@ class WordAdd(MethodView):
 #             return word
 #         except SQLAlchemyError:
 #             abort(500, message='Could not save word to database.')
-
-
-@blp.route('/words/<int:word_id>/games')
-class WordGamesList(MethodView):
-    @blp.response(200, WordSchema)
-    def get(self, word_id: int):
-        word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
-        print(word, word.games)
-        games_to_return = []
-        for game in word.games:
-            if game.is_active:
-                games_to_return.append(game)
-        print(games_to_return)
-        word.games = games_to_return
-    
-        return word
     
 
 @blp.route('/words/search')
