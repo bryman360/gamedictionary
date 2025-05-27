@@ -113,17 +113,18 @@ class WordAdd(MethodView):
 
 @blp.route('/words/<int:word_id>/games')
 class WordGamesList(MethodView):
-    @blp.response(200, GameSchema(many=True))
+    @blp.response(200, WordSchema)
     def get(self, word_id: int):
         word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
-        games_list = []
+        print(word, word.games)
+        games_to_return = []
         for game in word.games:
             if game.is_active:
-                games_list.append(game)
-            if len(games_list) >= 3:
-                break
-            
-        return games_list
+                games_to_return.append(game)
+        print(games_to_return)
+        word.games = games_to_return
+    
+        return word
     
 
 @blp.route('/words/search')
