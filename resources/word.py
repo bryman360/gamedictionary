@@ -2,6 +2,7 @@ from datetime import datetime
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from flask import request
@@ -11,6 +12,8 @@ from models import WordModel, GameModel
 from schemas import WordSchema, WordUpdateSchema, GameSchema, SearchSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
+
+query_limit = 15
 
 
 @blp.route('/words/<int:word_id>')
@@ -108,7 +111,7 @@ class WordAdd(MethodView):
 #             abort(500, message='Could not save word to database.')
 
 
-@blp.route('/words/<int:word_id>/game')
+@blp.route('/words/<int:word_id>/games')
 class WordGamesList(MethodView):
     @blp.response(200, GameSchema(many=True))
     def get(self, word_id: int):
@@ -130,9 +133,23 @@ class WordSearch(MethodView):
     def get(self, args: dict):
         page = args['page'] if 'page' in args else 1
         page = max(page, 1)
-        word = args['word']
-        
-        return WordModel.query.filter(WordModel.word.ilike('%' + word + '%')).limit(15).offset((page - 1) * 15).all()
+
+        filters = [WordModel.is_active.is_(True)]
+        if 'startsWith' in args:
+            filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
+        if 'word' in args:
+            filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
+
+
+        words_query = WordModel.query.filter(*filters).limit(query_limit).offset(query_limit * (page - 1)).all()
+
+        if not words_query:
+            abort(404, message='No words found.')
+
+        for word in words_query:
+            word.games = word.games[:4]
+    
+        return words_query
 
 # Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
 # Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
@@ -141,4 +158,3 @@ class WordSearch(MethodView):
 # Need flags for words (and maybe games?)
 # Flags need to be only usable by signed in persons
 # Need Upvotes/Downvotes for words (and maybe games?)
-# Do NOT need to login for Upvotes/Downvotes (use Frontend Local Storage to track if user "voted" on it)
