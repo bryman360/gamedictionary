@@ -93,6 +93,7 @@ class WordAndWordIdSchema(Schema):
     word_id = fields.Str(dump_only=True)
     word = fields.Str(dump_only=True)
 
+
 # ------------------------------------------------------------
 # Search Result Schemas
 # ------------------------------------------------------------
@@ -102,3 +103,11 @@ class GameWordsSearchResultSchema(PlainGameSchema):
 
 class GamesSearchResultSchema(PlainGameSchema):
     words = fields.Nested(WordAndWordIdSchema, many=True)
+
+# ------------------------------------------------------------
+# Vote Action Schemas
+# ------------------------------------------------------------
+
+class VoteActionSchema(Schema):
+    upvote_action = fields.Str()
+    downvote_action = fields.Str()
