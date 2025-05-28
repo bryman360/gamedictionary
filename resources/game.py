@@ -16,7 +16,7 @@ from schemas import (GameSchema,
                      GameWordsSearchResultSchema)
 
 words_per_game = 4
-per_page = 15
+query_limit = 15
 
 blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
 
@@ -104,8 +104,8 @@ class GamesSearch(MethodView):
                 GameModel.game_id,
                 GameModel.game_name
             ).where(*filters
-            ).offset(per_page * (page - 1)
-            ).limit(per_page)
+            ).offset(query_limit * (page - 1)
+            ).limit(query_limit)
         
         second_query = select(
                 first_query.c,
@@ -159,8 +159,8 @@ class GameWordsList(MethodView):
             ).where(
                 GamesWordsModel.game_id.is_(game_id),
                 WordModel.is_active.is_(True)
-            ).offset(per_page * (page - 1)
-            ).limit(per_page)
+            ).offset(query_limit * (page - 1)
+            ).limit(query_limit)
         
         games_words_with_authors_query = select(
                 games_words_query.c,
@@ -212,8 +212,8 @@ class GamesWordsSearch(MethodView):
                 WordModel
             ).join(GamesWordsModel
             ).where(*filters
-            ).offset(per_page * (page - 1)
-            ).limit(per_page)
+            ).offset(query_limit * (page - 1)
+            ).limit(query_limit)
         
         words_with_author_username_query = select(
                 games_words_query.c,
