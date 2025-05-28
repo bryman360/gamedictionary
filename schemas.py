@@ -6,7 +6,7 @@ from marshmallow import Schema, fields
 # ------------------------------------------------------------
 
 class PlainWordSchema(Schema):
-    word_id = fields.Str(dump_only=True)
+    word_id = fields.Int(dump_only=True)
     word = fields.Str(required=True)
     definition = fields.Str(required=True)
     example = fields.Str(required=True)
@@ -15,7 +15,7 @@ class PlainWordSchema(Schema):
     is_active = fields.Int(dump_only=True)
 
 class PlainGameSchema(Schema):
-    game_id = fields.Str(dump_only=True)
+    game_id = fields.Int(dump_only=True)
     game_name = fields.Str(required=True)
     image_url = fields.Str()
     wiki_url = fields.Str()

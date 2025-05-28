@@ -56,7 +56,6 @@ class Word(MethodView):
         except SQLAlchemyError:
             abort(500, message='Could not save word to database.')
     
-    # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
     @jwt_required()
     @blp.response(204)
     def delete(self, word_id: int):
@@ -146,7 +145,8 @@ class WordSearch(MethodView):
 # Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
 # Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
 # How to update with Wiki/Image URL if not done on initial post?
-# Can straight delete the games_words_links... BUT WHO CAN DO THIS? And how? And when?
+# Make games_words links need login and they are the ones who can delete it. Anyone can do it. Admins can also delete it. Maybe add permission_bans to offenders
+# Can straight delete the games_words links... BUT WHO CAN DO THIS? And how? And when?
 # Need flags for words (and maybe games?)
 # Flags need to be only usable by signed in persons
 # Need Upvotes/Downvotes for words (and maybe games?)
