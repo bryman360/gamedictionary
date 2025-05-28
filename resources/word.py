@@ -9,7 +9,7 @@ from flask import request
 
 from db import db
 from models import WordModel, GameModel
-from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema
+from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
 
@@ -78,7 +78,7 @@ class Word(MethodView):
 @blp.route('/words/<int:word_id>/vote')
 class WordVotes(MethodView):
     @blp.arguments(VoteActionSchema)
-    @blp.response(201, WordSchema)
+    @blp.response(201, VoteReturnSchema)
     def post(self, request_payload: dict, word_id: int):
         word = WordModel.query.get_or_404(word_id)
         if 'upvote_action' in request_payload and \
@@ -86,14 +86,18 @@ class WordVotes(MethodView):
             request_payload['upvote_action'] == request_payload['downvote_action']:
                 abort(400, message='Cannot have the same action for both upvote and downvote.')
         if 'upvote_action' in request_payload:
-            if request_payload['upvote_action'] == 'increment':
+            if request_payload['upvote_action'] != 'increment' and request_payload['upvote_action'] != 'decrement':
+                abort(400, message="Bad payload. Upvote action needs to be either increment or decrement.")
+            elif request_payload['upvote_action'] == 'increment':
                 word.upvotes += 1
-            elif request_payload['upvote_action'] == 'decrement':
+            elif request_payload['upvote_action'] == 'decrement' and word.upvotes > 0:
                 word.upvotes -= 1
         if 'downvote_action' in request_payload:
-            if request_payload['downvote_action'] == 'increment':
+            if request_payload['downvote_action'] != 'increment' and request_payload['downvote_action'] != 'decrement':
+                abort(400, message="Bad payload. Downvote action needs to be either increment or decrement.")
+            elif request_payload['downvote_action'] == 'increment':
                 word.downvotes += 1
-            elif request_payload['downvote_action'] == 'decrement':
+            elif request_payload['downvote_action'] == 'decrement' and word.downvotes > 0:
                 word.downvotes -= 1
         try:
             db.session.add(word)

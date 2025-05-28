@@ -111,3 +111,8 @@ class GamesSearchResultSchema(PlainGameSchema):
 class VoteActionSchema(Schema):
     upvote_action = fields.Str(load_only=True)
     downvote_action = fields.Str(load_only=True)
+
+class VoteReturnSchema(Schema):
+    word_id = fields.Int(dump_only=True)
+    upvotes = fields.Int(dump_only=True)
+    downvotes = fields.Int(dump_only=True)
