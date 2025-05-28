@@ -9,7 +9,7 @@ from flask import request
 
 from db import db
 from models import WordModel, GameModel
-from schemas import WordSchema, WordUpdateSchema, GameSchema, SearchSchema
+from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
 
@@ -47,6 +47,8 @@ class Word(MethodView):
             word = WordModel(**request_payload)
             word.submit_datetime = datetime.now()
             word.published = False
+            word.upvotes = 0
+            word.downvotes = 0
         word.is_active = True
 
         try:
@@ -73,6 +75,38 @@ class Word(MethodView):
         except SQLAlchemyError:
             abort(500, message=f'Word with ID {word_id} could not be deleted from database.')
 
+@blp.route('/words/<int:word_id>/vote')
+class WordVotes(MethodView):
+    @blp.arguments(VoteActionSchema)
+    @blp.response(201, VoteReturnSchema)
+    def post(self, request_payload: dict, word_id: int):
+        word = WordModel.query.get_or_404(word_id)
+        if 'upvote_action' in request_payload and \
+            'downvote_action' in request_payload and \
+            request_payload['upvote_action'] == request_payload['downvote_action']:
+                abort(400, message='Cannot have the same action for both upvote and downvote.')
+        if 'upvote_action' in request_payload:
+            if request_payload['upvote_action'] != 'increment' and request_payload['upvote_action'] != 'decrement':
+                abort(400, message="Bad payload. Upvote action needs to be either increment or decrement.")
+            elif request_payload['upvote_action'] == 'increment':
+                word.upvotes += 1
+            elif request_payload['upvote_action'] == 'decrement' and word.upvotes > 0:
+                word.upvotes -= 1
+        if 'downvote_action' in request_payload:
+            if request_payload['downvote_action'] != 'increment' and request_payload['downvote_action'] != 'decrement':
+                abort(400, message="Bad payload. Downvote action needs to be either increment or decrement.")
+            elif request_payload['downvote_action'] == 'increment':
+                word.downvotes += 1
+            elif request_payload['downvote_action'] == 'decrement' and word.downvotes > 0:
+                word.downvotes -= 1
+        try:
+            db.session.add(word)
+            db.session.commit()
+        except SQLAlchemyError:
+            abort(500, message=f'Word with ID {word_id} could not update the votes.')
+        
+        return word
+
 
 @blp.route('/words')
 class WordAdd(MethodView):
@@ -90,6 +124,8 @@ class WordAdd(MethodView):
         word.published = False
         word.author_id = int(current_user)
         word.is_active = True
+        word.upvotes = 0
+        word.downvotes = 0
 
         try:
             db.session.add(word)

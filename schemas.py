@@ -13,6 +13,8 @@ class PlainWordSchema(Schema):
     published = fields.Bool(dump_only=True)
     submit_datetime = fields.DateTime(dump_only=True)
     is_active = fields.Int(dump_only=True)
+    upvotes = fields.Int(dump_only=True)
+    downvotes = fields.Int(dump_only=True)
 
 class PlainGameSchema(Schema):
     game_id = fields.Int(dump_only=True)
@@ -91,6 +93,7 @@ class WordAndWordIdSchema(Schema):
     word_id = fields.Str(dump_only=True)
     word = fields.Str(dump_only=True)
 
+
 # ------------------------------------------------------------
 # Search Result Schemas
 # ------------------------------------------------------------
@@ -100,3 +103,16 @@ class GameWordsSearchResultSchema(PlainGameSchema):
 
 class GamesSearchResultSchema(PlainGameSchema):
     words = fields.Nested(WordAndWordIdSchema, many=True)
+
+# ------------------------------------------------------------
+# Vote Action Schemas
+# ------------------------------------------------------------
+
+class VoteActionSchema(Schema):
+    upvote_action = fields.Str(load_only=True)
+    downvote_action = fields.Str(load_only=True)
+
+class VoteReturnSchema(Schema):
+    word_id = fields.Int(dump_only=True)
+    upvotes = fields.Int(dump_only=True)
+    downvotes = fields.Int(dump_only=True)
