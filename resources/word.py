@@ -47,6 +47,8 @@ class Word(MethodView):
             word = WordModel(**request_payload)
             word.submit_datetime = datetime.now()
             word.published = False
+            word.upvotes = 0
+            word.downvotes = 0
         word.is_active = True
 
         try:
@@ -90,6 +92,8 @@ class WordAdd(MethodView):
         word.published = False
         word.author_id = int(current_user)
         word.is_active = True
+        word.upvotes = 0
+        word.downvotes = 0
 
         try:
             db.session.add(word)
