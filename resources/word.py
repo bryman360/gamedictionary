@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from flask import request
 
 from db import db
-from models import WordModel, GameModel
+from models import WordModel, UserModel
 from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
@@ -166,7 +166,11 @@ class WordSearch(MethodView):
             filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
         if 'word' in args:
             filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
-
+        if 'author' in args:
+            filters.append(WordModel.user.has(username=args['author']))
+    
+        print(args['author']) if 'author' in args else print('Pass')
+        print(UserModel.username.is_(args['author']))
 
         words_query = WordModel.query.filter(*filters).limit(query_limit).offset(query_limit * (page - 1)).all()
 

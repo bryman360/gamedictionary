@@ -79,6 +79,7 @@ class SearchSchema(Schema):
     word = fields.Str()
     page = fields.Int()
     startsWith = fields.Str()
+    author = fields.Str()
 
 
 # ------------------------------------------------------------
