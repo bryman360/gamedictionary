@@ -109,5 +109,5 @@ class GamesSearchResultSchema(PlainGameSchema):
 # ------------------------------------------------------------
 
 class VoteActionSchema(Schema):
-    upvote_action = fields.Str()
-    downvote_action = fields.Str()
+    upvote_action = fields.Str(load_only=True)
+    downvote_action = fields.Str(load_only=True)
