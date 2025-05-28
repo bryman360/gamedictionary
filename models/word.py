@@ -12,6 +12,8 @@ class WordModel(db.Model):
     published = db.Column(db.Boolean, unique=False, nullable=False)
     submit_datetime = db.Column(db.DateTime, unique=False, nullable=False)
     is_active = db.Column(db.Boolean, unique=False, nullable=False)
+    upvotes = db.Column(db.Integer, nullable=False)
+    downvotes = db.Column(db.Integer, nullable=False)
 
     user = db.relationship('UserModel', back_populates='words')
     games = db.relationship('GameModel', back_populates='words', secondary='games_words')
