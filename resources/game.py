@@ -2,9 +2,10 @@ from flask import jsonify
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
+from json import load as jsonload
+from random import randint
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
-from datetime import datetime
 
 from db import db
 from models import GameModel, WordModel, GamesWordsModel, UserModel
@@ -143,6 +144,34 @@ class GamesSearch(MethodView):
             output_results.append(game_objects[game_id])
 
         return output_results
+    
+@blp.route('/games/random')
+class GameRandom(MethodView):
+    @blp.response(200, GameSchema)
+    def get(self):
+        game_count = None
+        with open('metadata.json', 'r') as metadata:
+            game_count = jsonload(metadata)['game_count']
+    
+        if not game_count:
+            game_count = GameModel.query.count()
+
+        active_game_found = False
+        inactive_games_found = set()
+        while not active_game_found:
+            random_row_number = randint(0, game_count - 1)
+            while random_row_number in inactive_games_found:
+                random_row_number = randint(0, game_count)
+            game = GameModel.query.offset(random_row_number).first()
+            if game and game.is_active:
+                break
+            inactive_games_found.add(random_row_number)
+            print("Inactive games found so far:")
+            print(inactive_games_found)
+            if len(inactive_games_found) >= game_count:
+                abort(404, 'Could not find a game')
+
+        return game
 
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
