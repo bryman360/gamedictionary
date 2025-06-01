@@ -2,10 +2,9 @@ from datetime import datetime
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
-from sqlalchemy import select, func
+from json import load as jsonload
+from random import randint, shuffle
 from sqlalchemy.exc import SQLAlchemyError
-
-from flask import request
 
 from db import db
 from models import WordModel, UserModel
@@ -168,9 +167,6 @@ class WordSearch(MethodView):
             filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
         if 'author' in args:
             filters.append(WordModel.user.has(username=args['author']))
-    
-        print(args['author']) if 'author' in args else print('Pass')
-        print(UserModel.username.is_(args['author']))
 
         words_query = WordModel.query.filter(*filters).limit(query_limit).offset(query_limit * (page - 1)).all()
 
@@ -181,6 +177,36 @@ class WordSearch(MethodView):
             word.games = word.games[:4]
     
         return words_query
+    
+@blp.route('/words/random')
+class RandomWords(MethodView):
+    @blp.response(200, WordSchema(many=True))
+    def get(self):
+        word_count = None
+        with open('metadata.json', 'r') as metadata:
+            word_count = jsonload(metadata)['word_count']
+        if not word_count:
+            word_count = WordModel.query.count()
+        
+        limit_amount = min(30, word_count)
+        
+        last_acceptable_offset_amount = word_count - limit_amount
+
+        words_list = []
+        start_loc = randint(0, last_acceptable_offset_amount)
+        random_words = WordModel.query.offset(start_loc).limit(limit_amount).all()
+
+        selection_order = [i for i in range(limit_amount)]
+        shuffle(selection_order)
+
+        for index in selection_order:
+            if random_words[index].is_active:
+                random_words[index].games = random_words[index].games[:4]
+                words_list.append(random_words[index])
+            if len(words_list) >= 8:
+                return words_list
+
+        abort(404, message='Not enough random words found')
 
 # Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
 # Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
