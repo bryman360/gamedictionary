@@ -1,4 +1,3 @@
-from flask import jsonify
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
