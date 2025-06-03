@@ -100,29 +100,29 @@ class GamesSearch(MethodView):
             filters.append(GameModel.game_name.ilike('%' + args['name'] + '%'))
 
 
-        first_query = select(
+        first_subquery = select(
                 GameModel.game_id,
                 GameModel.game_name
             ).where(*filters
             ).offset(query_limit * (page - 1)
             ).limit(query_limit)
         
-        second_query = select(
-                first_query.c,
+        second_subquery = select(
+                first_subquery.c,
                 GamesWordsModel.word_id,
-                func.row_number().over(partition_by=first_query.c.game_id).label('rn')
+                func.rank().over(partition_by=first_subquery.c.game_id).label('rn')
             ).join(GamesWordsModel)
         
-        last_query = select(
-                second_query.c.game_id,
-                second_query.c.game_name,
+        last_subquery = select(
+                second_subquery.c.game_id,
+                second_subquery.c.game_name,
                 WordModel.word_id,
                 WordModel.word
             ).join(WordModel
-            ).where(second_query.c.rn<=words_per_game)
+            ).where(second_subquery.c.rn<=words_per_game)
 
 
-        query_results = [row for row in db.engine.connect().execute(last_query)]
+        query_results = [row for row in db.engine.connect().execute(last_subquery)]
         if not query_results:
             abort(404)
 
