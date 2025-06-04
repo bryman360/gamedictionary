@@ -156,9 +156,8 @@ class GameRandom(MethodView):
         if not game_count:
             game_count = GameModel.query.count()
 
-        active_game_found = False
         inactive_games_found = set()
-        while not active_game_found:
+        while True:
             random_row_number = randint(0, game_count - 1)
             while random_row_number in inactive_games_found:
                 random_row_number = randint(0, game_count)
@@ -166,10 +165,8 @@ class GameRandom(MethodView):
             if game and game.is_active:
                 break
             inactive_games_found.add(random_row_number)
-            print("Inactive games found so far:")
-            print(inactive_games_found)
             if len(inactive_games_found) >= game_count:
-                abort(404, 'Could not find a game')
+                abort(404, message='Could not find a game')
 
         return game
 
