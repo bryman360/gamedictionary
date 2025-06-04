@@ -86,9 +86,8 @@ class SearchSchema(Schema):
 # On the Fly Schemas (built after querying but before sending)
 # ------------------------------------------------------------
 
-class WordWithUsernameSchema(PlainWordSchema):
+class WordWithUsernameSchema(WordSchema):
     author_username = fields.Str()
-    author_id = fields.Int(dump_only=True)
 
 class WordAndWordIdSchema(Schema):
     word_id = fields.Str(dump_only=True)

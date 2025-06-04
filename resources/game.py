@@ -5,6 +5,7 @@ from json import load as jsonload
 from random import randint
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
+from flask import jsonify
 
 from db import db
 from models import GameModel, WordModel, GamesWordsModel, UserModel
@@ -175,49 +176,9 @@ class GameRandom(MethodView):
 @blp.route('/games/<int:game_id>/words')
 class GameWordsList(MethodView):
     @blp.arguments(SearchSchema, location='query')
-    @blp.response(200, GameWordsSearchResultSchema(exclude=['is_active']))
+    @blp.response(200, GameWordsSearchResultSchema)
     def get(self, args:dict, game_id: int):
-        page = args['page'] if 'page' in args else 1
-        page = max(page, 1)
-        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
-
-        games_words_query = select(
-                WordModel
-            ).join(GamesWordsModel
-            ).where(
-                GamesWordsModel.game_id.is_(game_id),
-                WordModel.is_active.is_(True)
-            ).offset(query_limit * (page - 1)
-            ).limit(query_limit)
-        
-        games_words_with_authors_query = select(
-                games_words_query.c,
-                UserModel.username
-            ).join(UserModel)
-
-        query_results = [row for row in db.engine.connect().execute(games_words_with_authors_query)]
-        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
-
-        for query_row in query_results:
-            row_word_id = query_row[0]
-            row_word = query_row[1]
-            row_definition = query_row[2]
-            row_example = query_row[3]
-            row_author_id = query_row[4]
-            row_submit_datetime = query_row[6]
-            row_author_username = query_row[-1]
-
-            word_object = {'word_id': row_word_id,
-                           'word': row_word,
-                           'definition': row_definition,
-                           'example': row_example,
-                           'submit_datetime': row_submit_datetime,
-                           'author_id': row_author_id,
-                           'author_username': row_author_username}
-
-            output_object['words'].append(word_object)
-
-        return output_object
+        return GamesWordsLookup(args, game_id)
     
 
 @blp.route('/games/<int:game_id>/words/search')
@@ -225,54 +186,9 @@ class GamesWordsSearch(MethodView):
     @blp.arguments(SearchSchema, location='query')
     @blp.response(200, GameWordsSearchResultSchema)
     def get(self, args: dict, game_id: int):
-        page = args['page'] if 'page' in args else 1
-        page = max(page, 1)
-        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404('Game not found')
-
-        filters = [WordModel.is_active.is_(True), GamesWordsModel.game_id.is_(game_id)]
-        if 'startsWith' in args:
-            filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
-        if 'word' in args:
-            filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
-
-
-        games_words_query = select(
-                WordModel
-            ).join(GamesWordsModel
-            ).where(*filters
-            ).offset(query_limit * (page - 1)
-            ).limit(query_limit)
-        
-        words_with_author_username_query = select(
-                games_words_query.c,
-                UserModel.username
-            ).join(UserModel)
-
-        query_results = [row for row in db.engine.connect().execute(words_with_author_username_query)]
-        
-        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
-
-        for query_row in query_results:
-            row_word_id = query_row[0]
-            row_word = query_row[1]
-            row_definition = query_row[2]
-            row_example = query_row[3]
-            row_author_id = query_row[4]
-            row_submit_datetime = query_row[6]
-            row_author_username = query_row[-1]
-            print(query_row)
-            word_object = {'word_id': row_word_id,
-                           'word': row_word,
-                           'definition': row_definition,
-                           'example': row_example,
-                           'submit_datetime': row_submit_datetime,
-                           'author_id': row_author_id,
-                           'author_username': row_author_username}
-
-            output_object['words'].append(word_object)
-        
-
-        return output_object
+        if 'word' not in args and 'startsWith' not in args:
+            abort(403, message='Must include either \'startsWith\' or \'word\' query parameters')
+        return GamesWordsLookup(args, game_id)
     
 
 @blp.route('/games/<int:game_id>/words/<int:word_id>')
@@ -313,3 +229,68 @@ class LinkGameToWord(MethodView):
             return {}
         except SQLAlchemyError:
             abort(500, message='Unable to delete game and word link in database.')
+
+
+def GamesWordsLookup(args, game_id):
+    page = args['page'] if 'page' in args else 1
+    page = max(page, 1)
+    startsWith = args['startsWith'] if 'startsWith' in args else ''
+    search_term = args['word'] if 'word' in args else ''
+    game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
+
+    words_query = select(
+            WordModel,
+            UserModel.username
+        ).join(GamesWordsModel
+        ).join(UserModel
+        ).where(
+            GamesWordsModel.game_id.is_(game_id),
+            WordModel.is_active.is_(True),
+            WordModel.word.ilike(startsWith + '%'),
+            WordModel.word.ilike('%' + search_term + '%')
+        ).offset(query_limit * (page - 1)
+        ).limit(query_limit)
+    
+    words_objects = {}
+    word_ids = set()
+
+    for row in db.engine.connect().execute(words_query):
+        word_ids.add(row[0])
+        words_objects[row[0]] = {
+            'word_id': row[0],
+            'word': row[1],
+            'definition': row[2],
+            'example': row[3],
+            'author_id': row[4],
+            'published': row[5],
+            'submit_datetime': row[6],
+            'is_active': row[7],
+            'upvotes': row[8],
+            'downvotes': row[9],
+            'author_username': row[10],
+            'games': []
+        }
+    
+    games_first_query = select(
+            GamesWordsModel,
+            GameModel.game_name,
+            func.row_number().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
+        ).join(GameModel
+        ).where(GamesWordsModel.word_id.in_(word_ids)
+        )
+    
+    games_second_query = select(
+            games_first_query.c.word_id,
+            games_first_query.c.game_id,
+            games_first_query.c.game_name
+        ).where(games_first_query.c.rn <= 4)
+    
+    for row in db.engine.connect().execute(games_second_query):
+        words_objects[row[0]]['games'].append({'game_id': row[1], 'game_name': row[2]})
+    
+    output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+
+    for word_id in words_objects:
+        output_object['words'].append(words_objects[word_id])
+
+    return output_object
