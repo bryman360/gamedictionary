@@ -274,7 +274,7 @@ def GamesWordsLookup(args, game_id):
     games_first_query = select(
             GamesWordsModel,
             GameModel.game_name,
-            func.row_number().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
+            func.rank().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
         ).join(GameModel
         ).where(GamesWordsModel.word_id.in_(word_ids)
         )
