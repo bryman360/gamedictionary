@@ -2,7 +2,7 @@ from flask.views import MethodView
 from flask_jwt_extended import get_jwt, jwt_required
 from flask_smorest import Blueprint, abort
 from json import load as jsonload
-from random import randint
+from random import randint, shuffle
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
 from flask import jsonify
@@ -156,9 +156,9 @@ class GameRandom(MethodView):
         if not game_count:
             game_count = GameModel.query.count()
 
-        inactive_games_found = set()
+        random_row_number = -1
+        inactive_games_found = set([random_row_number])
         while True:
-            random_row_number = randint(0, game_count - 1)
             while random_row_number in inactive_games_found:
                 random_row_number = randint(0, game_count)
             game = GameModel.query.offset(random_row_number).first()
@@ -176,6 +176,80 @@ class GameWordsList(MethodView):
     @blp.response(200, GameWordsSearchResultSchema)
     def get(self, args:dict, game_id: int):
         return GamesWordsLookup(args, game_id)
+    
+
+@blp.route('/games/<int:game_id>/words/random')
+class GameWordsList(MethodView):
+    @blp.response(200, GameWordsSearchResultSchema)
+    def get(self, game_id: int):
+        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
+
+        word_count = GamesWordsModel.query.filter_by(game_id=game_id).count()
+
+        if not word_count or word_count == 0:
+            abort(404, message='No words found for game: ' + game.game_name) 
+
+        limit_amount = min(30, word_count)
+        last_acceptable_offset_amount = word_count - limit_amount
+        start_loc = randint(0, last_acceptable_offset_amount)
+
+        random_section_of_words_query = select(
+                WordModel,
+                UserModel.username
+            ).join(GamesWordsModel
+            ).join(UserModel
+            ).where(GamesWordsModel.game_id.is_(game_id), WordModel.is_active.is_(True)
+            ).offset(start_loc
+            ).limit(limit_amount)
+        
+
+        randomized_selection_order = [i for i in range(limit_amount)]
+        shuffle(randomized_selection_order)
+        word_ids = set()
+        words_objects = {}
+
+        random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
+
+        for i in randomized_selection_order:
+            word_ids.add(random_words_query_result[i][0])
+            words_objects[random_words_query_result[i][0]] = {
+                'word_id': random_words_query_result[i][0],
+                'word': random_words_query_result[i][1],
+                'definition': random_words_query_result[i][2],
+                'example': random_words_query_result[i][3],
+                'author_id': random_words_query_result[i][4],
+                'published': random_words_query_result[i][5],
+                'submit_datetime': random_words_query_result[i][6],
+                'is_active': random_words_query_result[i][7],
+                'upvotes': random_words_query_result[i][8],
+                'downvotes': random_words_query_result[i][9],
+                'author_username': random_words_query_result[i][10],
+                'games': []
+            }
+    
+        games_first_query = select(
+                GamesWordsModel,
+                GameModel.game_name,
+                func.rank().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
+            ).join(GameModel
+            ).where(GamesWordsModel.word_id.in_(word_ids)
+            )
+        
+        games_second_query = select(
+                games_first_query.c.word_id,
+                games_first_query.c.game_id,
+                games_first_query.c.game_name
+            ).where(games_first_query.c.rn <= 4)
+    
+        for row in db.engine.connect().execute(games_second_query):
+            words_objects[row[0]]['games'].append({'game_id': row[1], 'game_name': row[2]})
+    
+        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+
+        for word_id in words_objects:
+            output_object['words'].append(words_objects[word_id])
+
+        return output_object
     
 
 @blp.route('/games/<int:game_id>/words/search')
