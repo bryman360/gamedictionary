@@ -193,7 +193,6 @@ class RandomWords(MethodView):
         
         last_acceptable_offset_amount = word_count - limit_amount
 
-        words_list = []
         start_loc = randint(0, last_acceptable_offset_amount)
 
         random_section_of_words_query = select(
