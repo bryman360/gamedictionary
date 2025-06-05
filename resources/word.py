@@ -4,10 +4,11 @@ from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
 from json import load as jsonload
 from random import randint, shuffle
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from db import db
-from models import WordModel, UserModel
+from models import WordModel, UserModel, GameModel, GamesWordsModel
 from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
@@ -194,19 +195,61 @@ class RandomWords(MethodView):
 
         words_list = []
         start_loc = randint(0, last_acceptable_offset_amount)
-        random_words = WordModel.query.offset(start_loc).limit(limit_amount).all()
 
-        selection_order = [i for i in range(limit_amount)]
-        shuffle(selection_order)
+        random_section_of_words_query = select(
+                WordModel,
+                UserModel.username
+            ).join(UserModel
+            ).offset(start_loc
+            ).limit(limit_amount)
 
-        for index in selection_order:
-            if random_words[index].is_active:
-                random_words[index].games = random_words[index].games[:4]
-                words_list.append(random_words[index])
-            if len(words_list) >= 8:
-                return words_list
+        randomized_selection_order = [i for i in range(limit_amount)]
+        shuffle(randomized_selection_order)
+        word_ids = set()
+        words_objects = {}
 
-        abort(404, message='Not enough random words found')
+        random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
+
+        for i in randomized_selection_order:
+            word_ids.add(random_words_query_result[i][0])
+            words_objects[random_words_query_result[i][0]] = {
+                'word_id': random_words_query_result[i][0],
+                'word': random_words_query_result[i][1],
+                'definition': random_words_query_result[i][2],
+                'example': random_words_query_result[i][3],
+                'author_id': random_words_query_result[i][4],
+                'published': random_words_query_result[i][5],
+                'submit_datetime': random_words_query_result[i][6],
+                'is_active': random_words_query_result[i][7],
+                'upvotes': random_words_query_result[i][8],
+                'downvotes': random_words_query_result[i][9],
+                'user': {'username': random_words_query_result[i][10]},
+                'games': []
+            }
+    
+        games_first_query = select(
+                GamesWordsModel,
+                GameModel.game_name,
+                func.rank().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
+            ).join(GameModel
+            ).where(GamesWordsModel.word_id.in_(word_ids)
+            )
+        
+        games_second_query = select(
+                games_first_query.c.word_id,
+                games_first_query.c.game_id,
+                games_first_query.c.game_name
+            ).where(games_first_query.c.rn <= 4)
+    
+        for row in db.engine.connect().execute(games_second_query):
+            words_objects[row[0]]['games'].append({'game_id': row[1], 'game_name': row[2]})
+
+        output_object = []
+
+        for word_id in words_objects:
+            output_object.append(words_objects[word_id])
+
+        return output_object
 
 # Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
 # Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
