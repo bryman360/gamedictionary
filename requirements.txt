@@ -7,3 +7,4 @@ psycopg2
 python-dotenv
 passlib
 flask-migrate
+flask-cors
