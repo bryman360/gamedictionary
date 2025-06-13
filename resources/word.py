@@ -202,12 +202,16 @@ class RandomWords(MethodView):
             ).offset(start_loc
             ).limit(limit_amount)
 
-        randomized_selection_order = [i for i in range(limit_amount)]
+        randomized_selection_order = [i for i in range(limit_amount - 1)]
         shuffle(randomized_selection_order)
         word_ids = set()
         words_objects = {}
 
+
         random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
+        if len(random_words_query_result) == 0:
+            abort(404, message='No words found in DB')
+        
 
         for i in randomized_selection_order:
             word_ids.add(random_words_query_result[i][0])
