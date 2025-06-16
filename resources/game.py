@@ -17,7 +17,7 @@ from schemas import (GameSchema,
                      GameWordsSearchResultSchema)
 
 words_per_game = 4
-query_limit = 15
+default_query_limit = 10
 
 blp = Blueprint('Games', __name__, description='Blueprint for /game endpoints')
 
@@ -91,8 +91,10 @@ class GamesSearch(MethodView):
     @blp.arguments(SearchSchema, location='query')
     @blp.response(200, GamesSearchResultSchema(many=True))
     def get(self, args: dict):
-        page = args['page'] if 'page' in args else 1
-        page = max(page, 1)
+        offset = args['offset'] if 'offset' in args else 0
+        offset = max(offset, 0)
+        limit = args['limit'] if 'limit' in args else default_query_limit
+        limit = max(limit, 1)
 
         filters = [GameModel.is_active.is_(True)]
         if 'startsWith' in args:
@@ -100,45 +102,50 @@ class GamesSearch(MethodView):
         if 'name' in args:
             filters.append(GameModel.game_name.ilike('%' + args['name'] + '%'))
 
-
-        first_subquery = select(
+        games_query = select(
                 GameModel.game_id,
                 GameModel.game_name
             ).where(*filters
-            ).offset(query_limit * (page - 1)
-            ).limit(query_limit)
+            ).offset(offset
+            ).limit(limit)
         
-        second_subquery = select(
-                first_subquery.c,
-                GamesWordsModel.word_id,
-                func.rank().over(partition_by=first_subquery.c.game_id).label('rn')
-            ).join(GamesWordsModel)
+        games_query_result = [row for row in db.engine.connect().execute(games_query)]
+        print(games_query_result)
+
+        if not games_query_result:
+            abort(404)
+
+        game_ids = []
+        game_objects = {}
+        for query_row in games_query_result:
+            game_id = query_row[0]
+            game_name = query_row[1]
+            game_ids.append(query_row[0])
+            game_objects[query_row[0]] = {'game_id': game_id,
+                                          'game_name': game_name,
+                                          'words': []}
+
+        games_words_query = select(
+                GamesWordsModel,
+                func.rank().over(partition_by=GamesWordsModel.game_id, order_by=GamesWordsModel.word_id).label('rn')
+            ).where(GamesWordsModel.game_id.in_(game_ids))
         
-        last_subquery = select(
-                second_subquery.c.game_id,
-                second_subquery.c.game_name,
+        words_query = select(
+                games_words_query.c.game_id,
                 WordModel.word_id,
                 WordModel.word
             ).join(WordModel
-            ).where(second_subquery.c.rn<=words_per_game)
+            ).where(games_words_query.c.rn<=words_per_game)
 
 
-        query_results = [row for row in db.engine.connect().execute(last_subquery)]
-        if not query_results:
-            abort(404)
+        words_query_result = [row for row in db.engine.connect().execute(words_query)]
 
-        game_objects = {}
         output_results = []
-        for query_row in query_results:
-            row_game_id = query_row[0]
-            row_game_name = query_row[1]
-            row_word_id = query_row[2]
-            row_word = query_row[3]
-            if row_game_id not in game_objects:
-                game_objects[row_game_id] = {'game_id': row_game_id,
-                                             'game_name': row_game_name,
-                                             'words': []}
-            game_objects[row_game_id]['words'].append({'word_id': row_word_id, 'word': row_word})
+        for query_row in words_query_result:
+            game_id = query_row[0]
+            word_id = query_row[1]
+            word = query_row[2]
+            game_objects[game_id]['words'].append({'word_id': word_id, 'word': word})
 
         for game_id in game_objects:
             output_results.append(game_objects[game_id])
@@ -303,8 +310,10 @@ class LinkGameToWord(MethodView):
 
 
 def GamesWordsLookup(args, game_id):
-    page = args['page'] if 'page' in args else 1
-    page = max(page, 1)
+    offset = args['offset'] if 'offset' in args else 0
+    offset = max(offset, 1)
+    limit = args['limit'] if 'limit' in args else default_query_limit
+    limit = max(limit, 1)
     startsWith = args['startsWith'] if 'startsWith' in args else ''
     search_term = args['word'] if 'word' in args else ''
     game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
@@ -319,8 +328,8 @@ def GamesWordsLookup(args, game_id):
             WordModel.is_active.is_(True),
             WordModel.word.ilike(startsWith + '%'),
             WordModel.word.ilike('%' + search_term + '%')
-        ).offset(query_limit * (page - 1)
-        ).limit(query_limit)
+        ).offset(offset
+        ).limit(limit)
     
     words_objects = {}
     word_ids = set()
