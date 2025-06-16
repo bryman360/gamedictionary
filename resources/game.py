@@ -310,24 +310,25 @@ class LinkGameToWord(MethodView):
 
 
 def GamesWordsLookup(args, game_id):
+    game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
+
     offset = args['offset'] if 'offset' in args else 0
-    offset = max(offset, 1)
+    offset = max(offset, 0)
     limit = args['limit'] if 'limit' in args else default_query_limit
     limit = max(limit, 1)
-    startsWith = args['startsWith'] if 'startsWith' in args else ''
-    search_term = args['word'] if 'word' in args else ''
-    game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
+
+    filters = [WordModel.is_active.is_(True), GamesWordsModel.game_id.is_(game_id)]
+    if 'startsWith' in args:
+        filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
+    if 'word' in args:
+        filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
 
     words_query = select(
             WordModel,
             UserModel.username
         ).join(GamesWordsModel
         ).join(UserModel
-        ).where(
-            GamesWordsModel.game_id.is_(game_id),
-            WordModel.is_active.is_(True),
-            WordModel.word.ilike(startsWith + '%'),
-            WordModel.word.ilike('%' + search_term + '%')
+        ).where(*filters
         ).offset(offset
         ).limit(limit)
     
