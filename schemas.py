@@ -77,7 +77,8 @@ class UserUpdateSchema(Schema):
 class SearchSchema(Schema):
     name = fields.Str()
     word = fields.Str()
-    page = fields.Int()
+    offset = fields.Int()
+    limit = fields.Int()
     startsWith = fields.Str()
     author = fields.Str()
 

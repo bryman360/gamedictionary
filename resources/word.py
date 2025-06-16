@@ -9,11 +9,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from db import db
 from models import WordModel, UserModel, GameModel, GamesWordsModel
-from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema
+from schemas import WordSchema, WordUpdateSchema, SearchSchema, VoteActionSchema, VoteReturnSchema, WordWithUsernameSchema
 
 blp = Blueprint('Words', __name__, description='Blueprint for /words endpoints')
 
-query_limit = 15
+games_per_word = 4
+default_query_limit = 10
 
 
 @blp.route('/words/<int:word_id>')
@@ -156,10 +157,12 @@ class WordAdd(MethodView):
 @blp.route('/words/search')
 class WordSearch(MethodView):
     @blp.arguments(SearchSchema, location='query')
-    @blp.response(200, WordSchema(many=True))
+    @blp.response(200, WordWithUsernameSchema(many=True))
     def get(self, args: dict):
-        page = args['page'] if 'page' in args else 1
-        page = max(page, 1)
+        offset = args['offset'] if 'offset' in args else 0
+        offset = max(offset, 0)
+        limit = args['limit'] if 'limit' in args else default_query_limit
+        limit = max(limit, 1)
 
         filters = [WordModel.is_active.is_(True)]
         if 'startsWith' in args:
@@ -169,19 +172,68 @@ class WordSearch(MethodView):
         if 'author' in args:
             filters.append(WordModel.user.has(username=args['author']))
 
-        words_query = WordModel.query.filter(*filters).limit(query_limit).offset(query_limit * (page - 1)).all()
+        words_query = select(
+                WordModel,
+                UserModel.username
+            ).join(UserModel
+            ).where(*filters
+            ).offset(offset
+            ).limit(limit)
 
-        if not words_query:
-            abort(404, message='No words found.')
+        word_ids = set()
+        words_objects = {}
 
-        for word in words_query:
-            word.games = word.games[:4]
+        words_query_result = [row for row in db.engine.connect().execute(words_query)]
+        if len(words_query_result) == 0:
+            abort(404, message='No words found in DB')
+        
+
+        for i in range(len(words_query_result)):
+            word_ids.add(words_query_result[i][0])
+            words_objects[words_query_result[i][0]] = {
+                'word_id': words_query_result[i][0],
+                'word': words_query_result[i][1],
+                'definition': words_query_result[i][2],
+                'example': words_query_result[i][3],
+                'author_id': words_query_result[i][4],
+                'published': words_query_result[i][5],
+                'submit_datetime': words_query_result[i][6],
+                'is_active': words_query_result[i][7],
+                'upvotes': words_query_result[i][8],
+                'downvotes': words_query_result[i][9],
+                'author_username': words_query_result[i][10],
+                'games': []
+            }
+
+        print(words_objects)
     
-        return words_query
+        games_first_query = select(
+                GamesWordsModel,
+                GameModel.game_name,
+                func.rank().over(partition_by=GamesWordsModel.word_id, order_by=GamesWordsModel.game_id).label('rn')
+            ).join(GameModel
+            ).where(GamesWordsModel.word_id.in_(word_ids)
+            )
+        
+        games_second_query = select(
+                games_first_query.c.word_id,
+                games_first_query.c.game_id,
+                games_first_query.c.game_name
+            ).where(games_first_query.c.rn <= 4)
+    
+        for row in db.engine.connect().execute(games_second_query):
+            words_objects[row[0]]['games'].append({'game_id': row[1], 'game_name': row[2]})
+
+        output_object = []
+
+        for word_id in words_objects:
+            output_object.append(words_objects[word_id])
+
+        return output_object
     
 @blp.route('/words/random')
 class RandomWords(MethodView):
-    @blp.response(200, WordSchema(many=True))
+    @blp.response(200, WordWithUsernameSchema(many=True))
     def get(self):
         word_count = None
         with open('metadata.json', 'r') as metadata:
@@ -226,9 +278,11 @@ class RandomWords(MethodView):
                 'is_active': random_words_query_result[i][7],
                 'upvotes': random_words_query_result[i][8],
                 'downvotes': random_words_query_result[i][9],
-                'user': {'username': random_words_query_result[i][10]},
+                'author_username': random_words_query_result[i][10],
                 'games': []
             }
+            if len(word_ids) == 7:
+                break
     
         games_first_query = select(
                 GamesWordsModel,
