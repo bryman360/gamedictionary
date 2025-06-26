@@ -105,6 +105,7 @@ class GameWordsSearchResultSchema(PlainGameSchema):
 class GamesSearchResultSchema(PlainGameSchema):
     words = fields.Nested(WordAndWordIdSchema, many=True)
 
+
 # ------------------------------------------------------------
 # Vote Action Schemas
 # ------------------------------------------------------------
@@ -117,3 +118,12 @@ class VoteReturnSchema(Schema):
     word_id = fields.Int(dump_only=True)
     upvotes = fields.Int(dump_only=True)
     downvotes = fields.Int(dump_only=True)
+
+
+# ------------------------------------------------------------
+# Login Schema
+# ------------------------------------------------------------
+
+class LoginSchema(Schema):
+    source = fields.Str()
+    token = fields.Str()
