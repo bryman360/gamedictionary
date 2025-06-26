@@ -1,3 +1,7 @@
+import os
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_req
 from flask.views import MethodView
 from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, create_refresh_token
 from flask_smorest import Blueprint, abort
@@ -8,7 +12,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from blocklist import BLOCKLIST
 from db import db
 from models import UserModel
-from schemas import UserSchema, UserUpdateSchema
+from schemas import UserSchema, UserUpdateSchema, LoginSchema
 
 
 blp = Blueprint('Users', __name__, description='Blueprint for user operations')
@@ -97,8 +101,18 @@ class User(MethodView):
 
 @blp.route('/login')
 class UserLogin(MethodView):
-    @blp.arguments(UserSchema)
+    @blp.arguments(LoginSchema)
     def post(self, request_payload):
+        if request_payload['source'] == 'Google':
+            try:
+                decoded_token = id_token.verify_oauth2_token(request_payload['token'], google_req.Request(), os.getenv('GOOGLE_CLIENT_ID'))
+                if decoded_token['iss'] != 'https://accounts.google.com':
+                    raise Exception('Error signing in with Google sign-in. Token is not a valid Google OAuth token.')
+                user_email = decoded_token['email']
+
+            except Exception as e:
+                abort(500, message=e)
+
         user = UserModel.query.filter(UserModel.username == request_payload['username']).first()
         if user and pbkdf2_sha256.verify(request_payload['password'], user.password):
             access_token = create_access_token(identity=str(user.user_id), fresh=True)
@@ -115,7 +129,7 @@ class UserLogout(MethodView):
         jti = jwt.get('jti')
         BLOCKLIST.add(jti)
         return {'message': 'Successfully logged out.'}
-    
+
 
 # TODO: Change refresh tokens to maybe be server side?
 @blp.route('/refresh')
