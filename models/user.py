@@ -4,8 +4,9 @@ class UserModel(db.Model):
     __tablename__ = 'users'
 
     user_id = db.Column(db.Integer, primary_key = True)
+    email = db.Column(db.String(254))
     username = db.Column(db.String(50), unique=True, nullable=False)
-    password = db.Column(db.String(), unique=False, nullable=False)
     is_active = db.Column(db.Boolean, unique=False, nullable=False)
+    refresh_token = db.Column(db.String(), unique=False, nullable=True)
 
     words = db.relationship('WordModel', back_populates='user', lazy='dynamic')
