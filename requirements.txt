@@ -8,3 +8,6 @@ python-dotenv
 passlib
 flask-migrate
 flask-cors
+pyjwt
+google-auth
+requests
