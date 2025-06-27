@@ -1,5 +1,6 @@
 import os
 
+from datetime import timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_req
 from flask.views import MethodView
@@ -16,6 +17,9 @@ from schemas import UserSchema, UserUpdateSchema, LoginSchema
 
 
 blp = Blueprint('Users', __name__, description='Blueprint for user operations')
+
+access_token_expiration_time = timedelta(minutes=10)
+refresh_token_expiration_time = timedelta(days=30)
 
 
 @blp.route('/register')
@@ -113,12 +117,38 @@ class UserLogin(MethodView):
             except Exception as e:
                 abort(500, message=e)
 
-        user = UserModel.query.filter(UserModel.username == request_payload['username']).first()
-        if user and pbkdf2_sha256.verify(request_payload['password'], user.password):
-            access_token = create_access_token(identity=str(user.user_id), fresh=True)
-            refresh_token = create_refresh_token(identity=str(user.user_id))
-            return {'access_token': access_token, 'refresh_token': refresh_token}
-        abort(401, message='Invalid login credentials.')
+        user = UserModel.query.filter(UserModel.email == user_email).first()
+
+        if user and user.is_active:
+            access_token = create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time)
+            refresh_token = create_refresh_token(identity=str(user.user_id), expires_delta=refresh_token_expiration_time)
+            try:
+                return {
+                    'message': 'User successfully logged in.',
+                    'access_token': access_token,
+                    'refresh_token': refresh_token
+                }, 200
+            except SQLAlchemyError:
+                abort(500, message='Unable to save user to database.')
+
+        elif not user:
+            user = UserModel(
+                username=user_email,
+                email=user_email,
+                is_active=True
+            )
+            try:
+                db.session.add(user)
+                db.session.commit()
+                user = UserModel.query.filter(UserModel.email == user_email).first()
+                user_id = user.user_id
+                return {
+                    'message': 'User successfully registered.',
+                    'access_token': create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time),
+                    'refresh_token': create_refresh_token(identity=str(user_id), expires_delta=refresh_token_expiration_time)
+                }, 201
+            except SQLAlchemyError:
+                abort(500, message='Unable to save user to database.')
 
 
 @blp.route('/logout')
@@ -137,6 +167,6 @@ class UserRefresh(MethodView):
     @jwt_required(refresh=True)
     def post(self):
         user_id = get_jwt_identity()
-        new_access_token = create_access_token(identity=user_id, fresh=False)
+        new_access_token = create_access_token(identity=user_id, fresh=False, expires_delta=access_token_expiration_time)
         BLOCKLIST.add(get_jwt()['jti'])
         return {'access_token': new_access_token}
