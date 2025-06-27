@@ -7,6 +7,5 @@ class UserModel(db.Model):
     email = db.Column(db.String(254))
     username = db.Column(db.String(50), unique=True, nullable=False)
     is_active = db.Column(db.Boolean, unique=False, nullable=False)
-    refresh_token = db.Column(db.String(), unique=False, nullable=True)
 
     words = db.relationship('WordModel', back_populates='user', lazy='dynamic')
