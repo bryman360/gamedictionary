@@ -111,11 +111,13 @@ class UserLogin(MethodView):
             try:
                 decoded_token = id_token.verify_oauth2_token(request_payload['token'], google_req.Request(), os.getenv('GOOGLE_CLIENT_ID'))
                 if decoded_token['iss'] != 'https://accounts.google.com':
-                    raise Exception('Error signing in with Google sign-in. Token is not a valid Google OAuth token.')
+                    abort(401, message='Unknown token source')
                 user_email = decoded_token['email']
 
             except Exception as e:
                 abort(500, message=e)
+        else:
+            abort(400, message='Unknown source identifier in request payload')
 
         user = UserModel.query.filter(UserModel.email == user_email).first()
 
