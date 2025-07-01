@@ -3,8 +3,9 @@ import os
 from datetime import timedelta
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_req
+from flask import jsonify, make_response
 from flask.views import MethodView
-from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, create_refresh_token
+from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, create_refresh_token, set_refresh_cookies
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import SQLAlchemyError
@@ -122,35 +123,34 @@ class UserLogin(MethodView):
         user = UserModel.query.filter(UserModel.email == user_email).first()
 
         if user and user.is_active:
-            access_token = create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time)
-            refresh_token = create_refresh_token(identity=str(user.user_id), expires_delta=refresh_token_expiration_time)
-            try:
-                return {
-                    'message': 'User successfully logged in.',
-                    'access_token': access_token,
-                    'refresh_token': refresh_token
-                }, 200
-            except SQLAlchemyError:
-                abort(500, message='Unable to save user to database.')
+            status_code = 200
+            message = 'User successfully logged in.'
+            username = user.username
 
-        elif not user:
+        else:
+            username = user_email.split('@', 1)
             user = UserModel(
-                username=user_email,
+                username=username,
                 email=user_email,
                 is_active=True
             )
+            status_code = 201
+            message = 'User successfully registered.'
             try:
                 db.session.add(user)
                 db.session.commit()
                 user = UserModel.query.filter(UserModel.email == user_email).first()
-                user_id = user.user_id
-                return {
-                    'message': 'User successfully registered.',
-                    'access_token': create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time),
-                    'refresh_token': create_refresh_token(identity=str(user_id), expires_delta=refresh_token_expiration_time)
-                }, 201
             except SQLAlchemyError:
                 abort(500, message='Unable to save user to database.')
+
+        response = make_response(jsonify(
+            message = message,
+            access_token = create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time),
+            username = username
+        ))
+
+        set_refresh_cookies(response, create_refresh_token(identity=str(user.user_id), expires_delta=refresh_token_expiration_time))
+        return response, status_code
 
 
 @blp.route('/logout')
@@ -163,7 +163,6 @@ class UserLogout(MethodView):
         return {'message': 'Successfully logged out.'}
 
 
-# TODO: Change refresh tokens to maybe be server side?
 @blp.route('/refresh')
 class UserRefresh(MethodView):
     @jwt_required(refresh=True)
