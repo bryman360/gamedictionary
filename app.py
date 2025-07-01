@@ -21,7 +21,7 @@ def create_app(db_url=None):
 
 
     app = Flask(__name__)
-    CORS(app)
+    CORS(app, supports_credentials=True)
 
     app.config['PROPAGATE_EXCEPTIONS'] = True
     app.config['API_TITLE'] = 'Game Dict REST API'
@@ -32,6 +32,9 @@ def create_app(db_url=None):
     app.config['OPENAPI_SWAGGER_UI_URL'] = 'https://cdn.jsdelivr.net/npm/swagger-ui-dist/'
     app.config['SQLALCHEMY_DATABASE_URI'] = db_url or os.getenv('DATABASE_URL', 'sqlite:///data.db')
     app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+    app.config['JWT_REFRESH_COOKIE_NAME'] = 'refresh_token_cookie'
+    app.config['JWT_COOKIE_DOMAIN'] = os.getenv('BASE_DOMAIN')
+    app.config['SESSION_COOKIE_SECURE'] = True
 
 
     db.init_app(app)

@@ -147,10 +147,11 @@ class UserLogin(MethodView):
             message = message,
             access_token = create_access_token(identity=str(user.user_id), fresh=True, expires_delta=access_token_expiration_time),
             username = username
-        ))
+        ), status_code)
 
-        set_refresh_cookies(response, create_refresh_token(identity=str(user.user_id), expires_delta=refresh_token_expiration_time))
-        return response, status_code
+        refresh_token = create_refresh_token(identity=str(user.user_id), expires_delta=refresh_token_expiration_time)
+        set_refresh_cookies(response, refresh_token)
+        return response
 
 
 @blp.route('/logout')
@@ -165,9 +166,8 @@ class UserLogout(MethodView):
 
 @blp.route('/refresh')
 class UserRefresh(MethodView):
-    @jwt_required(refresh=True)
-    def post(self):
+    @jwt_required(refresh=True, locations=['cookies'])
+    def get(self):
         user_id = get_jwt_identity()
         new_access_token = create_access_token(identity=user_id, fresh=False, expires_delta=access_token_expiration_time)
-        BLOCKLIST.add(get_jwt()['jti'])
         return {'access_token': new_access_token}
