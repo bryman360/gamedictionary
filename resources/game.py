@@ -110,7 +110,6 @@ class GamesSearch(MethodView):
             ).limit(limit)
         
         games_query_result = [row for row in db.engine.connect().execute(games_query)]
-        print(games_query_result)
 
         if not games_query_result:
             abort(404)
@@ -276,9 +275,7 @@ class LinkGameToWord(MethodView):
     @blp.response(201, WordSchema)
     def post(self, game_id: int, word_id: int):
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
-        print(game)
         word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
-        print(word)
         
         game.words.append(word)
         try:

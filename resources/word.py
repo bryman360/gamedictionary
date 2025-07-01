@@ -204,8 +204,6 @@ class WordSearch(MethodView):
                 'author_username': words_query_result[i][10],
                 'games': []
             }
-
-        print(words_objects)
     
         games_first_query = select(
                 GamesWordsModel,
