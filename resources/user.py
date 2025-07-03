@@ -169,5 +169,6 @@ class UserRefresh(MethodView):
     @jwt_required(refresh=True, locations=['cookies'])
     def get(self):
         user_id = get_jwt_identity()
+        user = UserModel.query.filter_by(user_id = int(user_id)).first()
         new_access_token = create_access_token(identity=user_id, fresh=False, expires_delta=access_token_expiration_time)
-        return {'access_token': new_access_token}
+        return {'access_token': new_access_token, 'username': user.username}
