@@ -125,5 +125,5 @@ class VoteReturnSchema(Schema):
 # ------------------------------------------------------------
 
 class LoginSchema(Schema):
-    source = fields.Str()
-    token = fields.Str()
+    source = fields.Str(required=True)
+    token = fields.Str(required=True)
