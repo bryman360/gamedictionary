@@ -5,7 +5,15 @@ from google.oauth2 import id_token
 from google.auth.transport import requests as google_req
 from flask import jsonify, make_response
 from flask.views import MethodView
-from flask_jwt_extended import create_access_token, get_jwt, get_jwt_identity, jwt_required, create_refresh_token, set_refresh_cookies
+from flask_jwt_extended import (
+    create_access_token,
+    get_jwt,
+    get_jwt_identity,
+    jwt_required,
+    create_refresh_token,
+    set_refresh_cookies,
+    unset_refresh_cookies
+)
 from flask_smorest import Blueprint, abort
 from passlib.hash import pbkdf2_sha256
 from sqlalchemy.exc import SQLAlchemyError
@@ -156,12 +164,11 @@ class UserLogin(MethodView):
 
 @blp.route('/logout')
 class UserLogout(MethodView):
-    @jwt_required()
-    def post(self):
-        jwt = get_jwt()
-        jti = jwt.get('jti')
-        BLOCKLIST.add(jti)
-        return {'message': 'Successfully logged out.'}
+    @jwt_required(refresh=True, locations=['cookies'])
+    def get(self):
+        response = make_response(jsonify(), 204)
+        unset_refresh_cookies(response)
+        return response
 
 
 @blp.route('/refresh')
