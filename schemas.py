@@ -19,8 +19,7 @@ class PlainWordSchema(Schema):
 class PlainGameSchema(Schema):
     game_id = fields.Int(dump_only=True)
     game_name = fields.Str(required=True)
-    image_url = fields.Str()
-    wiki_url = fields.Str()
+    developer = fields.Str()
     is_active = fields.Int(dump_only=True)
 
 class PlainUserSchema(Schema):
@@ -62,6 +61,7 @@ class WordUpdateSchema(Schema):
 
 class GameUpdateSchema(Schema):
     game_name = fields.Str()
+    developer = fields.Str()
     image_url = fields.Str()
     wiki_url = fields.Str()
 

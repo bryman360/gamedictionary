@@ -5,7 +5,6 @@ from json import load as jsonload
 from random import randint, shuffle
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
-from flask import jsonify
 
 from db import db
 from models import GameModel, WordModel, GamesWordsModel, UserModel
@@ -36,8 +35,7 @@ class Game(MethodView):
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first()
         if game:
             game.game_name = request_payload['game_name'] if 'game_name' in request_payload else game.game_name
-            game.wiki_url = request_payload['wiki_url'] if 'wiki_url' in request_payload else game.wiki_url
-            game.image_url = request_payload['image_url'] if 'image_url' in request_payload else game.image_url
+            game.developer = request_payload['developer'] if 'developer' in request_payload else game.developer
         else:
             game = GameModel(**request_payload)
         game.is_active = True
