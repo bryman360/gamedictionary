@@ -136,7 +136,7 @@ class UserLogin(MethodView):
             username = user.username
 
         else:
-            username = user_email.split('@', 1)
+            username = ''
             user = UserModel(
                 username=username,
                 email=user_email,
