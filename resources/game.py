@@ -1,5 +1,5 @@
 from flask.views import MethodView
-from flask_jwt_extended import get_jwt, jwt_required
+from flask_jwt_extended import get_jwt, jwt_required, get_jwt_identity
 from flask_smorest import Blueprint, abort
 from json import load as jsonload
 from random import randint, shuffle
@@ -7,7 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import select, func
 
 from db import db
-from models import GameModel, WordModel, GamesWordsModel, UserModel
+from models import GameModel, WordModel, GamesWordsModel, UserModel, GamesWordsLinkUserModel
 from schemas import (GameSchema,
                      GameUpdateSchema,
                      WordSchema,
@@ -268,36 +268,45 @@ class GamesWordsSearch(MethodView):
 
 @blp.route('/games/<int:game_id>/words/<int:word_id>')
 class LinkGameToWord(MethodView):
-    # TODO: Decide if this is allowable by anyone or any user with token.
     @jwt_required()
     @blp.response(201, WordSchema)
     def post(self, game_id: int, word_id: int):
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
         word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
+        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
+
+        if game_word_link:
+            return word
         
         game.words.append(word)
+        
         try:
             db.session.add(game)
+            db.session.flush()
+            game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
+            games_words_link_author = GamesWordsLinkUserModel(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity())
+            db.session.add(games_words_link_author)
             db.session.commit()
             return word
         except SQLAlchemyError:
             abort(500, message='Unable to link game and word in database.')
-    
-    # TODO: Figure out some kind of rule/permission restriction so not anyone can make these deletes.
+
     @jwt_required()
     @blp.response(204)
     def delete(self, game_id: int, word_id: int):
 
         jwt = get_jwt()
-        if not jwt.get('is_admin'):
-            abort(401, message='Permission denied. Admin privelege required.')
 
-        game = GameModel.query.filter_by(game_id=game_id, is_active=True)
-        word = WordModel.query.filter_by(word_id=word_id, is_active=True)
 
-        game.words.remove(word)
+        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
+        game_word_link_user = GamesWordsLinkUserModel.query.filter_by(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity())
+
+        if not game_word_link_user and not jwt.get('is_admin'):
+            abort(401, message='Permission denied to delete game/word link.')
+
         try:
-            db.session.add(game)
+            db.session.delete(game_word_link)
+            db.session.delete(game_word_link_user)
             db.session.commit()
             return {}
         except SQLAlchemyError:
