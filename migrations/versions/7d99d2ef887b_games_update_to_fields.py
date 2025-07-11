@@ -1,4 +1,4 @@
-"""Complete migration base reset
+"""Games update to fields
 
 Revision ID: 7d99d2ef887b
 Revises: c17a53ac86de
