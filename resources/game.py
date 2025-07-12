@@ -266,53 +266,6 @@ class GamesWordsSearch(MethodView):
         return GamesWordsLookup(args, game_id)
     
 
-@blp.route('/games/<int:game_id>/words/<int:word_id>')
-class LinkGameToWord(MethodView):
-    @jwt_required()
-    @blp.response(201, WordSchema)
-    def post(self, game_id: int, word_id: int):
-        game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
-        word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
-        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
-
-        if game_word_link:
-            return word
-        
-        game.words.append(word)
-        
-        try:
-            db.session.add(game)
-            db.session.flush()
-            game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
-            games_words_link_author = GamesWordsLinkUserModel(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity())
-            db.session.add(games_words_link_author)
-            db.session.commit()
-            return word
-        except SQLAlchemyError:
-            abort(500, message='Unable to link game and word in database.')
-
-    @jwt_required()
-    @blp.response(204)
-    def delete(self, game_id: int, word_id: int):
-
-        jwt = get_jwt()
-
-
-        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
-        game_word_link_user = GamesWordsLinkUserModel.query.filter_by(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity())
-
-        if not game_word_link_user and not jwt.get('is_admin'):
-            abort(401, message='Permission denied to delete game/word link.')
-
-        try:
-            db.session.delete(game_word_link)
-            db.session.delete(game_word_link_user)
-            db.session.commit()
-            return {}
-        except SQLAlchemyError:
-            abort(500, message='Unable to delete game and word link in database.')
-
-
 def GamesWordsLookup(args, game_id):
     game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
 

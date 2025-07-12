@@ -44,10 +44,9 @@ class GameSchema(PlainGameSchema):
 class UserSchema(PlainUserSchema):
     words = fields.List(fields.Nested(PlainWordSchema()), dump_only=True)
 
-class GameAndWordSchema(Schema):
-    message = fields.Str()
-    game = fields.Nested(GameSchema)
-    word = fields.Nested(WordSchema)
+class GameAndWordLinkSchema(Schema):
+    game_id = fields.Int(required=True)
+    word_id = fields.Int(required=True)
 
 
 # ------------------------------------------------------------

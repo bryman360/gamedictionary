@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from resources.game import blp as GameBlueprint
 from resources.word import blp as WordBlueprint
 from resources.user import blp as UserBlueprint
+from resources.links import blp as LinkBlueprint
 from blocklist import BLOCKLIST
 from db import db
 
@@ -108,5 +109,6 @@ def create_app(db_url=None):
     api.register_blueprint(GameBlueprint)
     api.register_blueprint(WordBlueprint)
     api.register_blueprint(UserBlueprint)
+    app.register_blueprint(LinkBlueprint)
 
     return app
