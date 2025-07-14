@@ -66,7 +66,6 @@ class GameUpdateSchema(Schema):
 
 class UserUpdateSchema(Schema):
     username = fields.Str()
-    password = fields.Str()
 
 
 # ------------------------------------------------------------
