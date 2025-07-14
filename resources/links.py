@@ -23,7 +23,7 @@ class LinkGameToWord(MethodView):
         game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
 
         if game_word_link:
-            return word
+            abort(409, message='Link already exists.')
 
         game = GameModel.query.filter_by(game_id=game_id, is_active=True).first_or_404()
         word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
