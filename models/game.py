@@ -9,3 +9,6 @@ class GameModel(db.Model):
     is_active = db.Column(db.Boolean, unique=False, nullable=False)
 
     words = db.relationship('WordModel', back_populates='games', secondary='games_words')
+
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
