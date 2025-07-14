@@ -63,25 +63,24 @@ class User(MethodView):
             abort(500, message='Unable to update user in database.')
 
 
-    # TODO: Rather than actually delete, just flag it for deletion later so it's not a true delete
-    @jwt_required(fresh=True)
-    @blp.response(204)
-    def delete(self, user_id: int):
-        jwt = get_jwt()
-        current_user = get_jwt_identity()
-        if not jwt.get('is_admin') and not current_user == str(user_id):
-            abort(403, message='Permission denied, user id does not match account id.')
+    # @jwt_required(fresh=True)
+    # @blp.response(204)
+    # def delete(self, user_id: int):
+    #     jwt = get_jwt()
+    #     current_user = get_jwt_identity()
+    #     if not jwt.get('is_admin') and not current_user == str(user_id):
+    #         abort(403, message='Permission denied, user id does not match account id.')
 
-        user = UserModel.query.get_or_404(user_id)
-        user.is_active = False
+    #     user = UserModel.query.get_or_404(user_id)
+    #     user.is_active = False
 
-        try:
-            db.session.add(user)
-            db.session.commit()
-            #TODO: Expire token.
-            return {}
-        except SQLAlchemyError:
-            abort(500, message='Unable to delete user from database.')
+    #     try:
+    #         db.session.add(user)
+    #         db.session.commit()
+    #         #TODO: Expire token.
+    #         return {}
+    #     except SQLAlchemyError:
+    #         abort(500, message='Unable to delete user from database.')
 
 
 @blp.route('/login')
@@ -107,6 +106,8 @@ class UserLogin(MethodView):
             message = 'User successfully logged in.'
             username = user.username
 
+        elif user:
+            abort(403, message='Permission denied. Account frozen by admin.')
         else:
             username = ''
             user = UserModel(
@@ -149,5 +150,7 @@ class UserRefresh(MethodView):
     def get(self):
         user_id = get_jwt_identity()
         user = UserModel.query.filter_by(user_id = int(user_id)).first()
+        if not user.is_active:
+            abort(403, message='Permission denied. Account frozen by admin.')
         new_access_token = create_access_token(identity=user_id, fresh=False, expires_delta=access_token_expiration_time)
         return {'access_token': new_access_token, 'username': user.username}
