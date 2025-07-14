@@ -102,7 +102,8 @@ class GamesSearch(MethodView):
 
         games_query = select(
                 GameModel.game_id,
-                GameModel.game_name
+                GameModel.game_name,
+                GameModel.developer
             ).where(*filters
             ).offset(offset
             ).limit(limit)
@@ -117,9 +118,11 @@ class GamesSearch(MethodView):
         for query_row in games_query_result:
             game_id = query_row[0]
             game_name = query_row[1]
+            developer = query_row[2]
             game_ids.append(query_row[0])
             game_objects[query_row[0]] = {'game_id': game_id,
                                           'game_name': game_name,
+                                          'developer': developer,
                                           'words': []}
 
         games_words_query = select(
