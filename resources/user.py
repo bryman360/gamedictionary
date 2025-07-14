@@ -32,7 +32,7 @@ refresh_token_expiration_time = timedelta(days=30)
 
 @blp.route('/users')
 class User(MethodView):    
-    @jwt_required(fresh=True)
+    @jwt_required()
     @blp.arguments(UserUpdateSchema)
     def put(self, request_payload):
         user_id = get_jwt_identity()
