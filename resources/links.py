@@ -17,7 +17,7 @@ class LinkGameToWord(MethodView):
     @jwt_required()
     @blp.arguments(GameAndWordLinkSchema)
     @blp.response(201, WordSchema)
-    def post(self, request_payload):
+    def post(self, request_payload: dict):
         game_id = request_payload['game_id']
         word_id = request_payload['word_id']
         game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
@@ -41,22 +41,23 @@ class LinkGameToWord(MethodView):
         except SQLAlchemyError:
             abort(500, message='Unable to link game and word in database.')
 
+
+@blp.route('/links/<int:game_id>/<int:word_id>')
+class LinkGameToWord(MethodView):
     @jwt_required()
     @blp.response(204)
     def delete(self, game_id: int, word_id: int):
-
         jwt = get_jwt()
 
-
-        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first()
-        game_word_link_user = GamesWordsLinkUserModel.query.filter_by(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity())
+        game_word_link = GamesWordsModel.query.filter_by(game_id=game_id, word_id=word_id).first_or_404()
+        game_word_link_user = GamesWordsLinkUserModel.query.filter_by(game_word_id=game_word_link.game_word_id, user_id=get_jwt_identity()).first_or_404()
 
         if not game_word_link_user and not jwt.get('is_admin'):
             abort(401, message='Permission denied to delete game/word link.')
 
         try:
-            db.session.delete(game_word_link)
             db.session.delete(game_word_link_user)
+            db.session.delete(game_word_link)
             db.session.commit()
             return {}
         except SQLAlchemyError:
