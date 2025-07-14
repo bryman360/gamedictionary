@@ -68,9 +68,9 @@ class LinkGameToWord(MethodView):
     
 @blp.route('/links/mylinks')
 class MyLinks(MethodView):
-    # @jwt_required()
+    @jwt_required()
     def get(self):
-        # user_id = get_jwt_identity()
+        user_id = get_jwt_identity()
         games_words_query = select(
             GamesWordsModel.game_word_id,
             GameModel.game_id,
@@ -85,7 +85,7 @@ class MyLinks(MethodView):
         ).join(GameModel, GameModel.game_id == GamesWordsModel.game_id
         ).join(GamesWordsLinkUserModel
         ).where(
-            GamesWordsLinkUserModel.user_id == 1,
+            GamesWordsLinkUserModel.user_id == user_id,
             WordModel.is_active == True,
             GameModel.is_active == True
         )
