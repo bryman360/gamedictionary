@@ -31,36 +31,8 @@ access_token_expiration_time = timedelta(minutes=10)
 refresh_token_expiration_time = timedelta(days=30)
 
 
-@blp.route('/register')
-class UserRegistration(MethodView):
-    @blp.arguments(UserSchema)
-    def post(self, request_payload):
-        user_lookup = UserModel.query.filter(UserModel.username == request_payload['username']).first()
-        if user_lookup and user_lookup.is_active:
-            abort(409, message='A user with that username already exists.')
-        hashed_password = pbkdf2_sha256.hash(request_payload['password'])
-
-        user = UserModel(username=request_payload['username'], password=hashed_password)
-        user.is_active = True
-
-        try:
-            db.session.add(user)
-            db.session.commit()
-            return {
-                'message': 'User successfully registered.',
-                'access_token': create_access_token(identity=str(user.user_id), fresh=True),
-                'refresh_token': create_refresh_token(identity=str(user.user_id))
-            }, 201
-        except SQLAlchemyError:
-            abort(500, message='Unable to save user to database.')
-
-
 @blp.route('/users/<int:user_id>')
-class User(MethodView):
-    @blp.response(200, UserSchema)
-    def get(self, user_id: int):
-        return UserModel.query.get_or_404(user_id)
-    
+class User(MethodView):    
     @jwt_required(fresh=True)
     @blp.arguments(UserUpdateSchema)
     def put(self, request_payload, user_id: int):
