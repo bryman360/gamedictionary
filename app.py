@@ -108,7 +108,7 @@ def create_app(db_url=None):
 
     api.register_blueprint(GameBlueprint)
     api.register_blueprint(WordBlueprint)
-    api.register_blueprint(UserBlueprint)
+    app.register_blueprint(UserBlueprint)
     app.register_blueprint(LinkBlueprint)
 
     return app
