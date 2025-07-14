@@ -125,3 +125,13 @@ class VoteReturnSchema(Schema):
 class LoginSchema(Schema):
     source = fields.Str(required=True)
     token = fields.Str(required=True)
+
+
+# ------------------------------------------------------------
+# Flag Schema
+# ------------------------------------------------------------
+
+class FlagSchema(Schema):
+    content_type = fields.Str(required=True)
+    id = fields.Int(required=True)
+    reason = fields.Str(required=True)

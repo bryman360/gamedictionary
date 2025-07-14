@@ -5,12 +5,14 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 from flask_migrate import Migrate
 from flask_smorest import Api
+from flask_mail import Mail
 from dotenv import load_dotenv
 
 from resources.game import blp as GameBlueprint
 from resources.word import blp as WordBlueprint
 from resources.user import blp as UserBlueprint
 from resources.links import blp as LinkBlueprint
+from resources.flag import blp as FlagBlueprint
 from blocklist import BLOCKLIST
 from db import db
 
@@ -36,11 +38,16 @@ def create_app(db_url=None):
     app.config['JWT_REFRESH_COOKIE_NAME'] = 'refresh_token_cookie'
     app.config['JWT_COOKIE_DOMAIN'] = os.getenv('BASE_DOMAIN')
     app.config['SESSION_COOKIE_SECURE'] = True
+    app.config['MAIL_SERVER'] = 'smtp.gmail.com'
+    app.config['MAIL_PORT'] = 587
+    app.config['MAIL_USERNAME'] = os.getenv('SEND_EMAIL')
+    app.config['MAIL_USE_TLS'] = True
 
 
     db.init_app(app)
     migrate = Migrate(app, db)
     api = Api(app)
+    mail = Mail(app)
     jwt = JWTManager(app)
 
     # TODO: Convert from 'identity==1' check to looking in DB for an actual admin flag (not setup yet)
@@ -110,5 +117,6 @@ def create_app(db_url=None):
     api.register_blueprint(WordBlueprint)
     app.register_blueprint(UserBlueprint)
     app.register_blueprint(LinkBlueprint)
+    app.register_blueprint(FlagBlueprint)
 
     return app
