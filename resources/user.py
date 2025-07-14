@@ -7,7 +7,6 @@ from flask import jsonify, make_response
 from flask.views import MethodView
 from flask_jwt_extended import (
     create_access_token,
-    get_jwt,
     get_jwt_identity,
     jwt_required,
     create_refresh_token,
@@ -22,7 +21,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from blocklist import BLOCKLIST
 from db import db
 from models import UserModel
-from schemas import UserSchema, UserUpdateSchema, LoginSchema
+from schemas import UserUpdateSchema, LoginSchema
 
 
 blp = Blueprint('Users', __name__, description='Blueprint for user operations')
@@ -31,34 +30,24 @@ access_token_expiration_time = timedelta(minutes=10)
 refresh_token_expiration_time = timedelta(days=30)
 
 
-@blp.route('/users/<int:user_id>')
+@blp.route('/users')
 class User(MethodView):    
     @jwt_required(fresh=True)
     @blp.arguments(UserUpdateSchema)
-    def put(self, request_payload, user_id: int):
-        jwt = get_jwt()
-        current_user = get_jwt_identity()
-        if not jwt.get('is_admin') and not current_user == str(user_id):
-            abort(403, message=f'Permission denied, user id does not match account id')
-
+    def put(self, request_payload):
+        user_id = get_jwt_identity()
         user = UserModel.query.get_or_404(user_id)
-        status_code = 202
-        
-        if not user:
-            user = UserModel(**request_payload)
-            status_code = 201
-        else:
-            user.password = pbkdf2_sha256.hash(request_payload['password']) if 'password' in request_payload else user.password
-            if 'username' in request_payload:
-                if UserModel.query.filter(UserModel.username == request_payload['username']).first():
-                    abort(409, message='A user with that username already exists.')
-                else:
-                    user.username = request_payload['username']
+
+        if 'username' in request_payload:
+            if UserModel.query.filter(UserModel.username == request_payload['username']).first():
+                abort(409, message='A user with that username already exists.')
+            else:
+                user.username = request_payload['username']
 
         try:
             db.session.add(user)
             db.session.commit()
-            return {'message': 'User successfully updated.'}, status_code
+            return {'message': 'User successfully updated.'}, 202
         except SQLAlchemyError:
             abort(500, message='Unable to update user in database.')
 
