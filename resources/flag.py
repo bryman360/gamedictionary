@@ -25,7 +25,7 @@ class Flag(MethodView):
 
         if content_type == 'other':
             if 'description' not in request_payload:
-                abort(405)
+                abort(400, message='Must include description')
             description = request_payload['description']
             subject = f'Flag for Uncategorized Reason'
 
@@ -34,13 +34,15 @@ class Flag(MethodView):
             
         else:
             if 'id' not in request_payload:
-                abort(405)
+                abort(400, message='Must include ID')
             content_id = request_payload['id']
 
             if content_type == 'word':
-                content = WordModel.query.first_or_404(content_id)
+                content = WordModel.query.filter_by(word_id=content_id).first_or_404()
             elif content_type == 'game':
-                content = GameModel.query.first_or_404(content_id)
+                content = GameModel.query.filter_by(game_id=content_id).first_or_404()
+            else:
+                abort(400, message='Unsupported content type selected.')
 
 
             subject = 'Flag for ' + content_type.upper() + ' ' + str(content_id)
