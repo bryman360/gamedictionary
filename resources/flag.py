@@ -26,10 +26,10 @@ class Flag(MethodView):
         if content_type == 'other':
             if 'description' not in request_payload:
                 abort(405)
-            
+            description = request_payload['description']
             subject = f'Flag for Uncategorized Reason'
 
-            body = f'Flagging for "Other" reason.\n\nDescription: {request_payload['description']}\n\n'
+            body = f'Flagging for "Other" reason.\n\nDescription: {description}\n\n'
             body += non_content_specific_line
             
         else:
