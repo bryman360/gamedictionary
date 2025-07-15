@@ -133,5 +133,6 @@ class LoginSchema(Schema):
 
 class FlagSchema(Schema):
     content_type = fields.Str(required=True)
-    id = fields.Int(required=True)
+    id = fields.Int()
+    description = fields.Str()
     reason = fields.Str(required=True)

@@ -14,14 +14,13 @@ blp = Blueprint('Flag', __name__, 'Blueprint for flag endpoint')
 
 @blp.route('/flag')
 class Flag(MethodView):
-    # @jwt_required()
+    @jwt_required()
     @blp.arguments(FlagSchema)
     @blp.response(200)
     def post(self, request_payload: dict):
-        # Link, word, game, other
         content_type = request_payload['content_type']
         reason = request_payload['reason']
-        user = UserModel.query.first_or_404(1)#get_jwt_identity())
+        user = UserModel.query.first_or_404(get_jwt_identity())
         non_content_specific_line = f'\n\nReason: "{reason}"\n\nby User: {{Username: {user.username}, User ID: {user.user_id}}}'
 
         if content_type == 'other':
