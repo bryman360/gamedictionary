@@ -96,7 +96,11 @@ class GamesSearch(MethodView):
 
         filters = [GameModel.is_active.is_(True)]
         if 'startsWith' in args:
-            filters.append(GameModel.game_name.ilike(args['startsWith'] + '%'))
+            if args['startsWith'] == '*':
+                regex_pattern = r'^[^A-Za-z].*'
+                filters.append(GameModel.game_name.op('regexp')(regex_pattern))
+            else:
+                filters.append(GameModel.game_name.ilike(args['startsWith'] + '%'))
         if 'name' in args:
             filters.append(GameModel.game_name.ilike('%' + args['name'] + '%'))
 
