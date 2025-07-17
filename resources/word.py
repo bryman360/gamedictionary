@@ -166,7 +166,11 @@ class WordSearch(MethodView):
 
         filters = [WordModel.is_active.is_(True)]
         if 'startsWith' in args:
-            filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
+            if (args['startsWith'] == '*'):
+                regex_pattern = r'^[^A-Za-z].*'
+                filters.append(WordModel.word.op('regexp')(regex_pattern))
+            else:
+                filters.append(WordModel.word.ilike(args['startsWith'] + '%'))
         if 'word' in args:
             filters.append(WordModel.word.ilike('%' + args['word'] + '%'))
         if 'author' in args:
