@@ -74,6 +74,13 @@ class GameList(MethodView):
     @blp.arguments(GameSchema)
     @blp.response(201, GameSchema)
     def post(self, request_payload):
+        if 'developer' in request_payload:
+            existing_game = GameModel.query.filter_by(game_name=request_payload['game_name'], developer=request_payload['developer']).first()
+        else:
+            existing_game = GameModel.query.filter_by(game_name=request_payload['game_name']).first()
+        if existing_game:
+            abort(409, message='Game arleady exists.')
+        
         game = GameModel(**request_payload)
         game.is_active = True
         try:
