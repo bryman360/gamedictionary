@@ -11,6 +11,7 @@ from resources.game import blp as GameBlueprint
 from resources.word import blp as WordBlueprint
 from resources.user import blp as UserBlueprint
 from resources.links import blp as LinkBlueprint
+from resources.utils import blp as UtilBlueprint
 from blocklist import BLOCKLIST
 from db import db
 
@@ -110,5 +111,6 @@ def create_app(db_url=None):
     api.register_blueprint(WordBlueprint)
     app.register_blueprint(UserBlueprint)
     app.register_blueprint(LinkBlueprint)
+    app.register_blueprint(UtilBlueprint)
 
     return app
