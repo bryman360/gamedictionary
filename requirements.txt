@@ -11,3 +11,4 @@ flask-cors
 pyjwt
 google-auth
 requests
+Flask-Mail
