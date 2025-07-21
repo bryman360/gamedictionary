@@ -318,11 +318,3 @@ class MyWords(MethodView):
         user_id = get_jwt_identity()
         words = WordModel.query.filter_by(is_active=True, author_id=user_id).all()
         return words
-
-# Only Admin deletes the game and when it's done, it's permanent so we can delete the games_words_links
-# Can straight delete the words and games_words_links (only word poster can do this since it's fine to include multiples of the same word by different people)
-# Make games_words links need login and they are the ones who can delete it. Anyone can do it. Admins can also delete it. Maybe add permission_bans to offenders
-# Can straight delete the games_words links... BUT WHO CAN DO THIS? And how? And when?
-# Need flags for words (and maybe games?)
-# Flags need to be only usable by signed in persons
-# Need Upvotes/Downvotes for words (and maybe games?)
