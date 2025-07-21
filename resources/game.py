@@ -262,7 +262,7 @@ class GameWordsList(MethodView):
         for row in db.engine.connect().execute(games_second_query):
             words_objects[row[0]]['games'].append({'game_id': row[1], 'game_name': row[2]})
     
-        output_object = {'game_id': game_id, 'game_name': game.game_name, 'words': []}
+        output_object = {'game_id': game_id, 'game_name': game.game_name, 'developer': game.developer, 'words': []}
 
         for word_id in words_objects:
             output_object['words'].append(words_objects[word_id])
