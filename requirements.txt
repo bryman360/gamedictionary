@@ -12,3 +12,4 @@ pyjwt
 google-auth
 requests
 Flask-Mail
+gunicorn
