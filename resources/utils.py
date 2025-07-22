@@ -18,3 +18,8 @@ class Stats(MethodView):
             abort(400)
         
         return {'game_count': game_count, 'word_count': word_count}, 200
+
+@blp.route('/')
+class Health(MethodView):
+    def get(self):
+        return {}, 200
