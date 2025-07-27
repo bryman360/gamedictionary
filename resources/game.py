@@ -79,7 +79,6 @@ class GamesSearch(MethodView):
                             )
 
         igdb_games_json = igdb_games.json()
-        print(igdb_games_json)
         for i in range(len(igdb_games_json)):
             if 'first_release_date' in igdb_games_json[i]:
                 igdb_games_json[i]['first_release_date'] = datetime.fromtimestamp(igdb_games_json[i]['first_release_date'])
