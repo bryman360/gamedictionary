@@ -14,9 +14,10 @@ class WordModel(db.Model):
     is_active = db.Column(db.Boolean, unique=False, nullable=False, default=True)
     upvotes = db.Column(db.Integer, unique=False, nullable=False, default=0)
     downvotes = db.Column(db.Integer, unique=False, nullable=False, default=0)
+    game_id = db.Column(db.Integer, db.ForeignKey('games.game_id'), unique=False, nullable=False)
 
     user = db.relationship('UserModel', back_populates='words')
-    games = db.relationship('GameModel', back_populates='words', secondary='games_words')
+    game = db.relationship('GameModel', back_populates='words')
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

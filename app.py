@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 from resources.game import blp as GameBlueprint
 from resources.word import blp as WordBlueprint
 from resources.user import blp as UserBlueprint
-from resources.links import blp as LinkBlueprint
 from resources.flag import blp as FlagBlueprint
 from resources.utils import blp as UtilBlueprint
 from blocklist import BLOCKLIST
@@ -22,6 +21,7 @@ import models
 
 def create_app(db_url=None):
     load_dotenv()
+
 
 
     app = Flask(__name__)
@@ -44,6 +44,9 @@ def create_app(db_url=None):
     app.config['MAIL_USERNAME'] = os.getenv('SEND_EMAIL')
     app.config['MAIL_PASSWORD'] = os.getenv('SEND_EMAIL_PASSWORD')
     app.config['MAIL_USE_TLS'] = True
+
+    with open('access.txt', 'r') as cred:
+        os.environ['IGDB_ACCESS_TOKEN'] = cred.read()
 
 
     db.init_app(app)
@@ -118,7 +121,6 @@ def create_app(db_url=None):
     api.register_blueprint(GameBlueprint)
     api.register_blueprint(WordBlueprint)
     app.register_blueprint(UserBlueprint)
-    app.register_blueprint(LinkBlueprint)
     app.register_blueprint(FlagBlueprint)
     app.register_blueprint(UtilBlueprint)
 
