@@ -71,13 +71,12 @@ class Word(MethodView):
         except SQLAlchemyError:
             abort(500, message=f'Word with ID {word_id} could not be deleted from database.')
 
-# Change to be /words/vote and have the word_id in the payload so it is uniform with the return and obvious which word to act on
-@blp.route('/words/<int:word_id>/vote')
+@blp.route('/words/vote')
 class WordVotes(MethodView):
     @blp.arguments(VoteActionSchema)
     @blp.response(201, VoteReturnSchema)
-    def post(self, request_payload: dict, word_id: int):
-        word = WordModel.query.filter_by(word_id=word_id, is_active=True).first_or_404()
+    def post(self, request_payload: dict):
+        word = WordModel.query.filter_by(word_id=request_payload['word_id'], is_active=True).first_or_404()
         if 'upvote_action' in request_payload and \
             'downvote_action' in request_payload and \
             request_payload['upvote_action'] == request_payload['downvote_action']:
@@ -100,7 +99,7 @@ class WordVotes(MethodView):
             db.session.add(word)
             db.session.commit()
         except SQLAlchemyError:
-            abort(500, message=f'Word with ID {word_id} could not update the votes.')
+            abort(500, message=f'Word with ID {word.word_id} could not update the votes.')
         
         return word
 
@@ -218,10 +217,9 @@ class RandomWords(MethodView):
             ).offset(start_loc
             ).limit(limit_amount)
 
-        randomized_selection_order = [i for i in range(limit_amount - 1)]
+        randomized_selection_order = [i for i in range(limit_amount)]
         shuffle(randomized_selection_order)
-        word_ids = set()
-        words_objects = {}
+        words_objects = []
 
 
         random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
@@ -233,8 +231,7 @@ class RandomWords(MethodView):
             is_active = random_words_query_result[i][7]
             if not is_active:
                 continue
-            word_ids.add(random_words_query_result[i][0])
-            words_objects[random_words_query_result[i][0]] = {
+            words_objects.append({
                 'word_id': random_words_query_result[i][0],
                 'word': random_words_query_result[i][1],
                 'definition': random_words_query_result[i][2],
@@ -247,8 +244,8 @@ class RandomWords(MethodView):
                 'downvotes': random_words_query_result[i][9],
                 'game_id': random_words_query_result[i][10],
                 'author_username': random_words_query_result[i][11],
-            }
-            if len(word_ids) == 7:
+            })
+            if len(words_objects) == 7:
                 break
         
         return words_objects

@@ -38,7 +38,7 @@ class PlainUserSchema(Schema):
 class WordSchema(PlainWordSchema):
     author_id = fields.Int(dump_only=True)
     user = fields.Nested(PlainUserSchema(), dump_only=True)
-    game_id = fields.Nested(PlainGameSchema(), dump_only=True)
+    game_id = fields.Int()
 
 class GameSchema(PlainGameSchema):
     words = fields.Nested(PlainWordSchema(), dump_only=True)
@@ -55,7 +55,7 @@ class WordUpdateSchema(Schema):
     word = fields.Str()
     definition = fields.Str()
     example = fields.Str()
-    game_id = fields.Str()
+    game_id = fields.Int()
 
 class UserUpdateSchema(Schema):
     username = fields.Str()
@@ -94,6 +94,7 @@ class WordWithUsernameSchema(WordSchema):
 # ------------------------------------------------------------
 
 class VoteActionSchema(Schema):
+    word_id = fields.Int(load_only=True)
     upvote_action = fields.Str(load_only=True)
     downvote_action = fields.Str(load_only=True)
 
