@@ -35,11 +35,12 @@ class Game(MethodView):
                             )
 
         igdb_game_json = igdb_game.json()
-        print(igdb_game_json)
         if 'first_release_date' in igdb_game_json[0]:
             igdb_game_json[0]['first_release_date'] = datetime.fromtimestamp(igdb_game_json[0]['first_release_date'])
+        if 'cover' in igdb_game_json[0]:
+            igdb_game_json[0]['cover_url'] = igdb_game_json[0]['cover']['url']
 
-        return igdb_game_json
+        return igdb_game_json[0]
     
 
 @blp.route('/games/search')
@@ -55,11 +56,11 @@ class GamesSearch(MethodView):
 
         name_filter = ''
         if 'startsWith' in args and 'name' in args:
-            abort(400, message='Must include \'startsWith\' OR \'game\' in query parameters, not both.')
+            name_filter=f'name~*"{args["name"]}"* & name~"{args["startsWith"]}"*'
         elif 'startsWith' in args:
-            name_filter=f'"{args["startsWith"]}"*'
+            name_filter=f'name~"{args["startsWith"]}"*'
         elif 'name' in args:
-            name_filter=f'*"{args["name"]}"*'
+            name_filter=f'name~*"{args["name"]}"*'
         else:
             abort(400, message='Must include \'startsWith\' or \'name\' in query parameters.')
         
@@ -70,7 +71,7 @@ class GamesSearch(MethodView):
                                         'Authorization': f'Bearer {os.getenv("IGDB_ACCESS_TOKEN")}'
                                     },
                                 'data':
-                                    f'where name~{name_filter};\n\
+                                    f'where {name_filter} & parent_game=null & game_type.type="Main Game" & version_parent=null;\n\
                                     fields name,summary,first_release_date,involved_companies,cover.url,slug;\
                                     limit {limit};\
                                     offset {offset};'
@@ -105,7 +106,7 @@ class GameRandom(MethodView):
                                         'Authorization': f'Bearer {os.getenv("IGDB_ACCESS_TOKEN")}'
                                     },
                                 'data':
-                                    f'where id=({game["game_id"]});\n\
+                                    f'where id=({game["game_id"]}) & parent_game=null & game_type.type="Main Game" & version_parent=null;\n\
                                     fields name,summary,first_release_date,involved_companies,cover.url,slug;'
                                 }
                             )
@@ -113,5 +114,7 @@ class GameRandom(MethodView):
         igdb_game_json = igdb_game.json()
         if 'first_release_date' in igdb_game_json[0]:
             igdb_game_json[0]['first_release_date'] = datetime.fromtimestamp(igdb_game_json[0]['first_release_date'])
+        if 'cover' in igdb_game_json[0]:
+            igdb_game_json[0]['cover_url'] = igdb_game_json[0]['cover']['url']
 
         return igdb_game_json
