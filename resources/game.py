@@ -6,6 +6,7 @@ from flask_smorest import Blueprint, abort
 from requests import post
 from sqlalchemy import func
 from sqlalchemy.orm import load_only
+from random import random
 
 from db import db
 from models import GameModel
@@ -92,11 +93,12 @@ class GameRandom(MethodView):
     @blp.response(200, GameSchema)
     def get(self):
         '''Get details from IGDB of a random game that has some definitions in GamerDictionary.'''
-        game = GameModel.query.options(load_only('game_id')).offset(
-            func.floor(
-                func.random() * db.session.query(func.count(1)).select_from(GameModel)
-            )
-        ).limit(1).first()
+        # game = GameModel.query.options(load_only(GameModel.game_id)).offset(
+        #     func.floor(
+        #         ((func.random() + 9223372036854775808) / 18446744073709551616.0) * db.session.query(func.count(GameModel.game_id))
+        #     )
+        # ).first()
+        game = GameModel.query.order_by(func.random()).first()
 
         igdb_game = post('https://api.igdb.com/v4/games',
                                 **{'headers':
@@ -105,7 +107,7 @@ class GameRandom(MethodView):
                                         'Authorization': f'Bearer {os.getenv("IGDB_ACCESS_TOKEN")}'
                                     },
                                 'data':
-                                    f'where id=({game["game_id"]}) & parent_game=null & game_type.type="Main Game" & version_parent=null;\n\
+                                    f'where id=({game.game_id}) & parent_game=null & game_type.type="Main Game" & version_parent=null;\n\
                                     fields name,summary,first_release_date,involved_companies,cover.url,slug;'
                                 }
                             )
@@ -116,4 +118,4 @@ class GameRandom(MethodView):
         if 'cover' in igdb_game_json[0]:
             igdb_game_json[0]['cover_url'] = igdb_game_json[0]['cover']['url']
 
-        return igdb_game_json
+        return igdb_game_json[0]
