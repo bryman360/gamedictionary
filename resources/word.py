@@ -123,7 +123,7 @@ class WordAdd(MethodView):
         word.upvotes = 0
         word.downvotes = 0
 
-        game = GameModel.query(game_id=request_payload['game_id']).first()
+        game = GameModel.query.get(request_payload['game_id'])
         new_game = None
         if not game:
             new_game = GameModel({'game_id': request_payload['game_id']})
