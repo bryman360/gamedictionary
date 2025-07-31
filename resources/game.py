@@ -43,6 +43,31 @@ class Game(MethodView):
 
         return igdb_game_json[0]
     
+@blp.route('/games/by_id/<int:game_id>')
+class GameByID(MethodView):
+    @blp.response(200, GameSchema)
+    def get(self, game_id: int):
+        '''Get a specific game's details from IGDB.'''
+        igdb_game = post('https://api.igdb.com/v4/games',
+                                **{'headers':
+                                    {
+                                        'Client-ID': os.getenv('IGDB_CLIENT_ID'),
+                                        'Authorization': f'Bearer {os.getenv("IGDB_ACCESS_TOKEN")}'
+                                    },
+                                'data':
+                                    f'where id=({game_id});\n\
+                                    fields name,summary,first_release_date,involved_companies,cover.url,slug;'
+                                }
+                            )
+
+        igdb_game_json = igdb_game.json()
+        if 'first_release_date' in igdb_game_json[0]:
+            igdb_game_json[0]['first_release_date'] = datetime.fromtimestamp(igdb_game_json[0]['first_release_date'])
+        if 'cover' in igdb_game_json[0]:
+            igdb_game_json[0]['cover_url'] = igdb_game_json[0]['cover']['url']
+
+        return igdb_game_json[0]
+    
 
 @blp.route('/games/search')
 class GamesSearch(MethodView):
