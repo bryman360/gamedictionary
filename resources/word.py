@@ -1,10 +1,11 @@
+import os
 from datetime import datetime
 from flask.views import MethodView
 from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
 from flask_smorest import Blueprint, abort
-from json import load as jsonload
+from requests import post as req_post
 from random import randint, shuffle
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 
 from db import db
@@ -42,7 +43,7 @@ class Word(MethodView):
         else:
             word = WordModel(**request_payload)
             word.submit_datetime = datetime.now()
-            word.published = False
+            word.published = True
             word.upvotes = 0
             word.downvotes = 0
         word.is_active = True
@@ -117,7 +118,7 @@ class WordAdd(MethodView):
         current_user = get_jwt_identity()
         word = WordModel(**request_payload)
         word.submit_datetime = datetime.now()
-        word.published = False
+        word.published = True
         word.author_id = int(current_user)
         word.is_active = True
         word.upvotes = 0
@@ -126,7 +127,23 @@ class WordAdd(MethodView):
         game = GameModel.query.get(request_payload['game_id'])
         new_game = None
         if not game:
-            new_game = GameModel({'game_id': request_payload['game_id']})
+            igdb_game = req_post('https://api.igdb.com/v4/games',
+                                **{'headers':
+                                    {
+                                       'Client-ID': os.getenv('IGDB_CLIENT_ID'),
+                                        'Authorization': f'Bearer {os.getenv("IGDB_ACCESS_TOKEN")}'
+                                    },
+                                'data':
+                                    f'where id=({request_payload["game_id"]}) & parent_game=null & game_type.type="Main Game" & version_parent=null;\n\
+                                    fields name,summary,first_release_date,involved_companies,cover.url,slug;'
+                                }
+                            )
+            
+            if not igdb_game:
+                abort(400, message='No game found in IGDB with that game ID')
+            
+            new_game = GameModel()
+            new_game.game_id = request_payload['game_id']
         # new_game.words.append(word)
 
         try:
@@ -185,70 +202,67 @@ class WordSearch(MethodView):
 
         words_query = select(
                 WordModel,
-                UserModel.username
+                UserModel.username.label('author_username')
             ).join(UserModel
             ).where(*filters
             ).offset(offset
             ).limit(limit)
 
         words_query_result = [row for row in db.engine.connect().execute(words_query)]
+        print(words_query_result)
         return words_query_result
     
 @blp.route('/words/random')
 class RandomWords(MethodView):
+    @blp.arguments(WordSearchSchema)
     @blp.response(200, WordWithUsernameSchema(many=True))
-    def get(self):
-        word_count = None
-        with open('metadata.json', 'r') as metadata:
-            word_count = jsonload(metadata)['word_count']
-        if not word_count:
+    def get(self, args: dict):
+        if 'game_id' in args:
+            limit = 10
+            filters = [WordModel.is_active.is_(True), WordModel.game_id.is_(args['game_id']), WordModel.published.is_(True)]
+            random_words_by_game_id_query = select(WordModel
+                ).where(*filters
+                ).order_by(func.random()
+                ).limit(limit
+                )
+
+            return [row for row in db.engine.connect().execute(random_words_by_game_id_query)]
+
+        else:
             word_count = WordModel.query.count()
-        
-        limit_amount = min(30, word_count)
-        
-        last_acceptable_offset_amount = word_count - limit_amount
 
-        start_loc = randint(0, last_acceptable_offset_amount)
+            limit_amount = min(30, word_count)
 
-        random_section_of_words_query = select(
-                WordModel,
-                UserModel.username
-            ).join(UserModel
-            ).offset(start_loc
-            ).limit(limit_amount)
+            last_acceptable_offset_amount = word_count - limit_amount
 
-        randomized_selection_order = [i for i in range(limit_amount)]
-        shuffle(randomized_selection_order)
-        words_objects = []
+            start_loc = randint(0, last_acceptable_offset_amount)
+
+            random_section_of_words_query = select(
+                    WordModel,
+                    UserModel.username.label('author_username')
+                ).join(UserModel
+                ).offset(start_loc
+                ).limit(limit_amount)
+
+            randomized_selection_order = [i for i in range(limit_amount)]
+            shuffle(randomized_selection_order)
+            words_objects = []
 
 
-        random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
-        if len(random_words_query_result) == 0:
-            return []
-        
+            random_words_query_result = [row for row in db.engine.connect().execute(random_section_of_words_query)]
+            if len(random_words_query_result) == 0:
+                return []
+            
 
-        for i in randomized_selection_order:
-            is_active = random_words_query_result[i][7]
-            if not is_active:
-                continue
-            words_objects.append({
-                'word_id': random_words_query_result[i][0],
-                'word': random_words_query_result[i][1],
-                'definition': random_words_query_result[i][2],
-                'example': random_words_query_result[i][3],
-                'author_id': random_words_query_result[i][4],
-                'published': random_words_query_result[i][5],
-                'submit_datetime': random_words_query_result[i][6],
-                'is_active': random_words_query_result[i][7],
-                'upvotes': random_words_query_result[i][8],
-                'downvotes': random_words_query_result[i][9],
-                'game_id': random_words_query_result[i][10],
-                'author_username': random_words_query_result[i][11],
-            })
-            if len(words_objects) == 7:
-                break
-        
-        return words_objects
+            for i in randomized_selection_order:
+                is_active = random_words_query_result[i][7]
+                if not is_active:
+                    continue
+                words_objects.append(random_words_query_result[i])
+                if len(words_objects) == 7:
+                    break
+            
+            return words_objects
 
 @blp.route('/words/mywords')
 class MyWords(MethodView):
