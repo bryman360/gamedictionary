@@ -55,11 +55,12 @@ def create_app(db_url=None):
     mail = Mail(app)
     jwt = JWTManager(app)
 
-    # TODO: Convert from 'identity==1' check to looking in DB for an actual admin flag (not setup yet)
+
     @jwt.additional_claims_loader
     def add_claims_to_jwt(identity):
         additional_claims = {}
-        if identity == '1':
+        user_roles = models.RoleModel.query.filter_by(user_id=identity).first()
+        if user_roles and user_roles.admin == True:
             additional_claims['is_admin'] = True
         return additional_claims
 

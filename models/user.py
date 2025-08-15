@@ -9,3 +9,4 @@ class UserModel(db.Model):
     is_active = db.Column(db.Boolean, nullable=False)
 
     words = db.relationship('WordModel', back_populates='user', lazy='dynamic')
+    roles = db.relationship('RoleModel', back_populates='user', lazy='dynamic')
