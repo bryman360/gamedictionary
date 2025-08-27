@@ -28,7 +28,7 @@ def create_app(db_url=None):
     CORS(app, supports_credentials=True)
 
     app.config['PROPAGATE_EXCEPTIONS'] = True
-    app.config['API_TITLE'] = 'Game Dict REST API'
+    app.config['API_TITLE'] = 'Gamer Dictionary REST API'
     app.config['API_VERSION'] = 'v1'
     app.config['OPENAPI_VERSION'] = '3.0.3'
     app.config['OPENAPI_URL_PREFIX'] = '/'
