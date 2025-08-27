@@ -36,6 +36,8 @@ class Game(MethodView):
                             )
 
         igdb_game_json = igdb_game.json()
+        if len(igdb_game_json) == 0:
+            abort(404)
         if 'first_release_date' in igdb_game_json[0]:
             igdb_game_json[0]['first_release_date'] = datetime.fromtimestamp(igdb_game_json[0]['first_release_date'])
         if 'cover' in igdb_game_json[0]:
@@ -61,6 +63,8 @@ class GameByID(MethodView):
                             )
 
         igdb_game_json = igdb_game.json()
+        if len(igdb_game_json) == 0:
+            abort(404)
         if 'first_release_date' in igdb_game_json[0]:
             igdb_game_json[0]['first_release_date'] = datetime.fromtimestamp(igdb_game_json[0]['first_release_date'])
         if 'cover' in igdb_game_json[0]:
@@ -105,6 +109,8 @@ class GamesSearch(MethodView):
                             )
 
         igdb_games_json = igdb_games.json()
+        if len(igdb_games_json) == 0:
+            return [], 200
         for i in range(len(igdb_games_json)):
             if 'first_release_date' in igdb_games_json[i]:
                 igdb_games_json[i]['first_release_date'] = datetime.fromtimestamp(igdb_games_json[i]['first_release_date'])

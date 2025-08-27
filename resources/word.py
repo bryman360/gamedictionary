@@ -209,7 +209,7 @@ class WordSearch(MethodView):
             ).limit(limit)
 
         words_query_result = [row for row in db.engine.connect().execute(words_query)]
-        print(words_query_result)
+
         return words_query_result
     
 @blp.route('/words/random')
